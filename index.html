@@ -257,6 +257,9 @@ button:not(.sec):not(.tab):not(.tbtn):not(.nav):not(.mn){background:var(--acc);b
 <p class="note" style="margin-top:0">Majburiy ustunlar: <b>TT01, TT02, FT01, FT02, FT03, LT01, WT, AT01, AT02</b>. Ixtiyoriy: <b>U11, U12</b> (klapanlar, %), <b>M01, M02</b> (tezlik, %) — ular bo‘lmasa tegishli izchillik tekshiruvlari o‘chiriladi.</p>
 <div class="pgrid" style="max-width:520px">
 <div><label for="pDT">Diskretlik, soniya</label><input id="pDT" type="number" value="10" min="1"></div>
+<div><label for="pQg">Gaz sarfi maks. Q<sub>g,max</sub>, m³/soat</label><input id="pQg" type="number" value="400"></div>
+<div><label for="pQa">Birlamchi havo maks. Q<sub>a1,max</sub>, m³/soat</label><input id="pQa" type="number" value="4500"></div>
+<div><label for="pFm">Ta’minlagich maks. F<sub>max</sub>, t/soat</label><input id="pFm" type="number" value="10.5" step="0.1"></div>
 <div><label for="pTR">Normal deb olinadigan boshlang‘ich qism, %</label><input id="pTR" type="number" value="30" min="10" max="90"></div>
 </div>
 <label for="csv">Fayl (.xlsx, .csv)</label><input id="csv" type="file" accept=".xlsx,.csv,.txt,text/csv" style="max-width:520px">
@@ -277,7 +280,7 @@ T<sub>f</sub>* = T<sub>0</sub> + η·Q<sub>g</sub>·H<sub>u</sub>·min(1, λ) / 
 <div class="eq">E = κ·Q<sub>da</sub>·c<sub>a</sub>·(T<sub>d</sub> − T<sub>chiq</sub>) / r        (bug‘latish qobiliyati, t/soat)
 W = F·w<sub>kir</sub>/100,   w* = w<sub>kir</sub>·exp(−β·E / W),   τ<sub>p</sub>·dw/dt = w* − w,   AT02(t) = w(t − t<sub>k</sub>)</div>
 <h2 style="margin-top:14px">4. Bunker va ta’minot</h2>
-<div class="eq">dL/dt = 100·(F<sub>kir</sub> − F) / (60·M<sub>b</sub>),   F = u<sub>M01</sub>·F<sub>max</sub>·η<sub>sh</sub></div>
+<div class="eq">dL/dt = 100·(F<sub>kir</sub> − F) / (60·M<sub>b</sub>),   F = u<sub>M01</sub>·F<sub>max</sub>·k<sub>f</sub>   (normal ishda k<sub>f</sub> = 1; shnek tiqilganda yoki M02 to‘xtaganda k<sub>f</sub> &lt; 1)</div>
 <h2 style="margin-top:14px">5. Boshqaruv va himoya (PLC)</h2>
 <div class="eq">u<sub>1-2</sub>: PI, TT02 → topshiriq;   u<sub>1-1</sub>: FT02 → λ<sub>0</sub>·9,5·FT01;   u<sub>1-3</sub> = const
 TT01 ≥ 1180 °C, TT02 ≥ 400 °C yoki λ ≤ 0,95 ⇒ gorelka o‘chiriladi
@@ -295,7 +298,7 @@ r<sub>I</sub> = (WT̄ + M<sub>b</sub>·dL/dt − F<sub>kir,nom</sub>) / 1,   r<s
 <b>R</b> = max<sub>j</sub>(w₁x₁ⱼ + w₂x₂ⱼ) + w₃x₃ + w₄x₄,   R ≥ R* ketma-ket 3 o‘lchov ⇒ ogohlantirish</div>
 <p class="note">Isolation Forest: 100 daraxt, 256 tanlanma, 30 ta normal ssenariyda qoldiqlar vektori [r<sub>T</sub>, r<sub>G</sub>, r<sub>A</sub>, r<sub>F</sub>, r<sub>M</sub>, r<sub>I</sub>, r<sub>W</sub>] bo‘yicha o‘qitiladi. Sabab tashxisi |r| ≥ 4 qoidalari asosida (ustuvorlik: TT02, gaz, havo, M02, shnek, kelim, namlik).</p>
 <h2 style="margin-top:14px">8. Taxminiy parametrlar</h2>
-<p class="note">Q<sub>g,max</sub> = 400, Q<sub>a1,max</sub> = 4500, Q<sub>a2,max</sub> = 12000 m³/soat; H<sub>u</sub> = 34 MJ/m³; η = 0,5; F<sub>kir</sub> = 7 t/soat; w<sub>kir</sub> = 18 %; M<sub>b</sub> = 30 t; TT02 topshiriq 350 °C. Barcha qiymatlar taxminiy — real qurilma ma’lumotlari bilan almashtirilishi kerak.</p></div>
+<p class="note">Q<sub>g,max</sub> = 400, Q<sub>a1,max</sub> = 4500, Q<sub>a2,max</sub> = 12000 m³/soat; H<sub>u</sub> = 34 000 kJ/m³ (34 MJ/m³); c<sub>p</sub> = 1,45 kJ/(m³·K) (issiq gaz); c<sub>a</sub> = 1,35 kJ/(m³·K) (quritish agenti); r = 2800 kJ/kg (bug‘lanish issiqligi); κ = 0,92; β = 1,88; T<sub>0</sub> = 20 °C; T<sub>chiq</sub> = 120 °C; F<sub>max</sub> = 10,5 t/soat; stexiometrik havo 9,5 m³/m³; τ<sub>f</sub> = 4, τ<sub>d</sub> = 1,5, τ<sub>p</sub> = 6 daq, kechikish t<sub>k</sub> = 3 daq; η = 0,5; F<sub>kir</sub> = 7 t/soat; w<sub>kir</sub> = 18 %; M<sub>b</sub> = 30 t; TT02 topshiriq 350 °C. Barcha qiymatlar taxminiy — real qurilma ma’lumotlari bilan almashtirilishi kerak.</p></div>
 </div></section>
 
 <section class="view" id="v-settings">
@@ -398,7 +401,7 @@ function runPlant(kind,r,P){
     const wStar=water>0.01?Math.max(0.8,winT*Math.exp(-P.beta*E/water)):wout;
     wout+=(wStar-wout)*dt/P.tauP; buf[bi]=wout;bi=(bi+1)%buf.length;const wDel=buf[bi];
     // TT02 datchigi
-    let TT02m=Td+bias.TT02+gauss(r)*1.5*nz; if(kind==='f4'&&on)TT02m-=drift*fk;
+    let TT02m=Td+bias.TT02+gauss(r)*1.5*nz; if(kind==='f4'&&on)TT02m-=drift*fk; TT02m=Math.max(P.T0,TT02m);
     const m={TT01:Tf+bias.TT01+gauss(r)*3*nz,TT02:TT02m,trueTT02:Td,FT01:Qg*(1+bias.FT01+gauss(r)*0.008*nz),FT02:Qa1*(1+bias.FT02+gauss(r)*0.008*nz),FT03:Qa2*(1+gauss(r)*0.008*nz),
       LT01:L+gauss(r)*0.3*nz,WT:Ff*(1+gauss(r)*0.015*nz),AT01:winT+gauss(r)*0.15*nz,AT02:Math.max(0,wDel+gauss(r)*0.1*nz),trueW:wout,U11:uA,U12:uG,U13:P.u3,M01:feeder?P.uM01:0,M02:m02+gauss(r)*0.3*nz,FIN:Fin};
     m.LAM=m.FT01>20?m.FT02/(P.Lst*m.FT01):NaN;
@@ -499,11 +502,11 @@ function diagnose(run,idx,P){
   const cand=[['tt02',f(k=>R.rT[k]<-4)],['gasleak',f(k=>R.rG[k]>4)],['airloss',f(k=>R.rA[k]<-4)],['jam',f(k=>R.rF[k]<-4)],['rotor',f(k=>R.rM[k]<-4)],
    ['feedloss',f(k=>R.rI[k]<-4,Math.round(5/dt))],
    ['moisture',f(k=>R.rW[k]>4)]];
+  // eng erta paydo bo'lgan belgi — asosiy sabab (himoya ishlagach paydo bo'ladigan ikkilamchi belgilar e'tiborga olinmaydi); vaqt teng bo'lsa ustuvorlik bo'yicha
   const pr=['tt02','gasleak','airloss','rotor','jam','feedloss','moisture'];
-  let best=null;for(const [c,k] of cand){if(k<0)continue;if(!best||pr.indexOf(c)<pr.indexOf(best.code)||(false))best={code:c,k};}
-  // eng yuqori ustuvorlikdagi topilgan sabab (tartib bo'yicha)
-  for(const c of pr){const x=cand.find(q=>q[0]===c);if(x[1]>=0)return {code:c,k:x[1]}}
-  return {code:'none',k:-1};
+  let best=null;
+  for(const [c,k] of cand){if(k<0)continue;if(!best||k<best.k||(k===best.k&&pr.indexOf(c)<pr.indexOf(best.code)))best={code:c,k}}
+  return best||{code:'none',k:-1};
 }
 
 /* ===== Excel (.xlsx) o'qish va yozish — kutubxonasiz ===== */
@@ -595,10 +598,10 @@ function download(name,u8,type){const a=document.createElement('a');a.href=URL.c
 <script>
 const $=id=>document.getElementById(id);
 const fmt=(x,d=1)=>Number(x).toFixed(d).replace('.',',');
-const nb=(v,d)=>isFinite(v)?fmt(v,d):'NaN';
+const nb=(v,d)=>isFinite(v)?fmt(v,d):'—';
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const tick=()=>new Promise(r=>setTimeout(r,0));
-const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const XN=['Chegaraga yaqinlik (x₁)','Hodisagacha vaqt (x₂)','Anomaliya (x₃)','O‘lchovlar izchilligi (x₄)'];
 const RES=['TT02 ↔ aralashma modeli','FT01 ↔ gaz klapani 1-2','FT02 ↔ havo klapani 1-1','WT ↔ shnek M01','M02 tezligi','Bunker massa balansi','Kirish namligi AT01'];
 const PDEF=plantDefaults();
@@ -1425,7 +1428,7 @@ function csvRows(txt){const lines=txt.replace(/\r/g,'').split('\n').filter(l=>l.
 function parseRows(rows){if(rows.length<60)throw new Error('Kamida 60 qator kerak.');const hd=rows[0].map(x=>String(x).toUpperCase().trim());
   const need=['TT01','TT02','FT01','FT02','FT03','LT01','WT','AT01','AT02'];const miss=need.filter(c=>!hd.includes(c));if(miss.length)throw new Error('Ustunlar yetishmaydi: '+miss.join(', '));
   const body=rows.slice(1),T=body.length,d={};for(const v of VARS)d[v]=new Float64Array(T).fill(NaN);
-  for(const c of COLS){const i=hd.indexOf(c);if(i<0)continue;d[c]=Float64Array.from(body.map(r=>r[i]!==undefined&&String(r[i]).trim()!==''?parseFloat(String(r[i]).replace(',','.')):NaN))}
+  for(const c of COLS){const i=hd.indexOf(c);if(i<0)continue;d[c]=Float64Array.from(body.map(r=>r[i]!==undefined&&String(r[i]).trim()!==''?parseFloat(String(r[i]).replace(/\s/g,'').replace(',','.')):NaN))}
   if(hd.indexOf('U13')<0)d.U13=new Float64Array(T).fill(P.u3);if(hd.indexOf('M02')<0)d.M02=new Float64Array(T).fill(P.uM02);
   for(let k=0;k<T;k++)d.LAM[k]=d.FT01[k]>20?d.FT02[k]/(P.Lst*d.FT01[k]):NaN;d.trueTT02=d.TT02;d.trueW=d.AT02;d.FIN=new Float64Array(T).fill(NaN);
   d.burner=Uint8Array.from(d.FT01,x=>x>20?1:0);d.feeder=Uint8Array.from(d.WT,x=>x>0.2?1:0);d.conv=new Uint8Array(T).fill(1);
@@ -1434,11 +1437,11 @@ function findTrips(d){const N=d.TT01.length,val={TT01:d.TT01,TT02:d.TT02,LAM:d.L
   for(let k=0;k<N;k++)for(let j=0;j<EV.length;j++){const e=EV[j];if(e.hidden)continue;const y=val[e.v][k];if(!isFinite(y))continue;if(e.up?y>=e.T:y<=e.T)return [{k,j}]}return []}
 $('csv').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   try{let rows;if(/\.xlsx$/i.test(f.name))rows=await readXlsx(await f.arrayBuffer());else rows=csvRows(await f.text());
-    const run=parseRows(rows);P.dt=(+$('pDT').value||10)/60;const nTr=Math.max(60,Math.floor(run.d.TT01.length*(+$('pTR').value||30)/100));
+    const run=parseRows(rows);const gq=(id,def)=>{const v=parseFloat($(id).value);return v>0?v:def};P.Qg_max=gq('pQg',PDEF.Qg_max);P.Qa1_max=gq('pQa',PDEF.Qa1_max);P.Ffeed_max=gq('pFm',PDEF.Ffeed_max);P.dt=(+$('pDT').value||10)/60;const nTr=Math.max(60,Math.floor(run.d.TT01.length*(+$('pTR').value||30)/100));
     const sub={};for(const v of VARS)sub[v]=run.d[v].slice(0,nTr);sub.burner=run.d.burner.slice(0,nTr);const X=features(sub,P).X.slice(10);model=trainIF(X,100,Math.min(256,X.length),5);mode='csv';load(run);prog=run.d.TT01.length;render();
-    $('csvMsg').textContent=f.name+': '+run.d.TT01.length+' qator yuklandi. Model birinchi '+nTr+' qatorda o‘qitildi (normal rejim deb olindi).';showView('overview')}
+    $('csvMsg').textContent=f.name+': '+run.d.TT01.length+' qator yuklandi. Model birinchi '+nTr+' qatorda o‘qitildi (normal rejim deb olindi).';$('status').textContent=f.name+' — foydalanuvchi ma’lumoti.';showView('overview')}
   catch(er){$('csvMsg').textContent='Xato: '+er.message}e.target.value=''};
-$('back').onclick=()=>{P.dt=DT;model=simModel;mode='sim';runSimNow(false);$('csvMsg').textContent='Simulyatsiya rejimiga qaytildi.'};
+$('back').onclick=()=>{P.Qg_max=PDEF.Qg_max;P.Qa1_max=PDEF.Qa1_max;P.Ffeed_max=PDEF.Ffeed_max;P.dt=DT;model=simModel;mode='sim';runSimNow(false);$('csvMsg').textContent='Simulyatsiya rejimiga qaytildi.'};
 $('sample').onclick=()=>{const run=runPlant('f4',rngMake(9),{...P,noise:1,sev:0});const d=run.d;const rows=[COLS];
   for(let k=0;k<d.TT01.length;k++)rows.push(COLS.map(c=>+(+d[c][k]).toFixed(3)));download('namuna_quritgich.xlsx',buildXlsx([{name:'Ma’lumot',rows}]),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')};
 $('xExp').onclick=()=>{if(!cur)return;const d=cur.run.d,id=cur.idx,T=d.TT01.length,nv=(v,n)=>isFinite(v)?+v.toFixed(n):'';
