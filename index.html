@@ -13,6 +13,7 @@
 <button class="nav" data-view="trends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 3 5-6"/></svg>Trendlar</button>
 <button class="nav" data-view="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3L12 3z"/><path d="M12 10v4M12 17v.5"/></svg>AI xabarlari va indeks</button>
 <button class="nav" data-view="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6M9 16h6M8 3h8l4 4v14H4V3z"/></svg>Hodisa tahlili (Review)</button>
+<button class="nav" data-view="journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Hodisalar jurnali<span class="bdg"></span></button>
 <button class="nav" data-view="batch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/></svg>Ommaviy sinov</button>
 <button class="nav" data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>O‘z ma’lumotingiz</button>
 <button class="nav" data-view="math"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14M5 5l7 7-7 7h14"/></svg>Matematik model</button>
@@ -22,8 +23,8 @@
 <div class="mainwrap">
 <div class="topbar"><span class="crumb">Quritish qurilmasi › <b id="crumb">Umumiy ko‘rinish</b></span>
 <span class="live"><i></i><span>Simulyatsiya · Real-time<small id="clock">—</small></span></span>
-<button class="tbtn" id="theme" aria-label="Kun / tun rejimi">☾ / ☀</button><button class="tbtn pri" id="refresh">↻ Yangilash</button></div>
-<div class="mnav" id="mnav"><button class="mn" data-view="overview">Umumiy ko‘rinish</button><button class="mn" data-view="mimic">Mnemosxema</button><button class="mn" data-view="3d">3D ko‘rinish</button><button class="mn" data-view="trends">Trendlar</button><button class="mn" data-view="ai">AI xabarlari va indeks</button><button class="mn" data-view="review">Hodisa tahlili (Review)</button><button class="mn" data-view="batch">Ommaviy sinov</button><button class="mn" data-view="data">O‘z ma’lumotingiz</button><button class="mn" data-view="math">Matematik model</button><button class="mn" data-view="settings">Sozlamalar</button></div>
+<select class="tbtn" id="lang" aria-label="Til / Язык / Language"><option value="uz">UZ</option><option value="ru">RU</option><option value="en">EN</option></select><button class="tbtn" id="theme" aria-label="Kun / tun rejimi">☾ / ☀</button><button class="tbtn pri" id="refresh">↻ Yangilash</button></div>
+<div class="mnav" id="mnav"><button class="mn" data-view="overview">Umumiy ko‘rinish</button><button class="mn" data-view="mimic">Mnemosxema</button><button class="mn" data-view="3d">3D ko‘rinish</button><button class="mn" data-view="trends">Trendlar</button><button class="mn" data-view="ai">AI xabarlari va indeks</button><button class="mn" data-view="review">Hodisa tahlili (Review)</button><button class="mn" data-view="journal">Hodisalar jurnali<span class="bdg"></span></button><button class="mn" data-view="batch">Ommaviy sinov</button><button class="mn" data-view="data">O‘z ma’lumotingiz</button><button class="mn" data-view="math">Matematik model</button><button class="mn" data-view="settings">Sozlamalar</button></div>
 <div class="ctrl" id="ctrl">
 <div class="f" style="min-width:260px"><label for="kind">Holat turi</label><select id="kind"></select></div>
 <div class="f" style="min-width:90px;width:90px"><label for="seed">Variant</label><input id="seed" type="number" value="3" min="1" step="1"></div>
@@ -63,7 +64,7 @@
 <label class="chk"><input type="checkbox" id="truth"> Haqiqiy qiymatlarni ham ko‘rsatish (faqat simulyatsiya)</label></div>
 <div class="card">
 <p class="cap" style="margin-top:0">TT01 — o‘txona harorati, °C</p><canvas id="c1" height="150"></canvas>
-<p class="cap">TT02 — quritish agenti harorati, °C (uzuq chiziq — haqiqiy qiymat)</p><canvas id="c2" height="150"></canvas>
+<p class="cap">TT02 — quritish agenti harorati, °C (nuqtali chiziqlar — modeldan kutilgan qiymat ±2σ; uzuq chiziq — haqiqiy qiymat)</p><canvas id="c2" height="150"></canvas>
 <p class="cap">λ — birlamchi havo / gaz nisbati (FT02 / 9,5·FT01)</p><canvas id="c3" height="130"></canvas>
 <p class="cap">Namlik, %: AT02 mahsulot (qora), AT01 kirish (kulrang), AI bashorati (sariq uzuq)</p><canvas id="c4" height="150"></canvas>
 <p class="cap">LT01 — bunker sathi, %</p><canvas id="c5" height="130"></canvas>
@@ -82,6 +83,12 @@
 <section class="view" id="v-review">
 <div class="vh"><div><h1>Hodisa tahlili (Review)</h1><p>Tanlangan holat bo‘yicha avtomatik tahlil: sabab, voqealar ketma-ketligi, parametrlar o‘zgarishi, texnolog va KIP xulosasi.</p></div></div>
 <div class="btns" style="margin:0 0 10px"><button id="rvPdf" class="sec">PDF hisobot (chop etish)</button></div><div class="card" id="rv"><div id="review"><p class="note">Hisoblanmoqda…</p></div></div>
+</section>
+
+<section class="view" id="v-journal">
+<div class="vh"><div><h1>Hodisalar jurnali</h1><p>Tanlangan holat bo‘yicha PLC, AI va tizim voqealari vaqt tartibida. Operator har bir voqeani tasdiqlaydi (ACK).</p></div></div>
+<div class="card"><div class="btns" style="margin-top:0"><button id="jAck">Hammasini tasdiqlash</button><button id="jCsv" class="sec">CSV’ga eksport</button><button id="jClr" class="sec">Tasdiqlarni tozalash</button></div>
+<p class="note" id="jInfo"></p><div class="tw"><table id="jTab"></table></div></div>
 </section>
 
 <section class="view" id="v-batch">
@@ -175,5 +182,7 @@ r<sub>I</sub> = (WT̄ + M<sub>b</sub>·dL/dt − F<sub>kir,nom</sub>) / 1,   r<s
 <script src="js/scene3d.bundle.js"></script>
 <script src="js/scene3d-view.js"></script>
 <script src="js/pdf-quiz.js"></script>
+<script src="js/journal.js"></script>
 <script src="js/mn3d.js"></script>
+<script src="js/i18n.js"></script>
 </body></html>

@@ -56,3 +56,25 @@ test('Matematik model bo‘limidagi sonlar CONFIG bilan mos',()=>{
     [`τ<sub>f</sub> = ${c.tauF}`],[`τ<sub>d</sub> = ${String(c.tauD).replace('.',',')}`],[`τ<sub>p</sub> = ${c.tauP}`],[`TT02 topshiriq ${c.sp} °C`]];
   for(const [t] of chk)assert.ok(html.includes(t),'Matematik model matnida topilmadi: '+t);
 });
+
+test('bir vaqtdagi ikki nosozlik: topiladi va tashxis haqiqiy sabablardan biri (≥ 90 %)',()=>{
+  for(const c of ['f1+f4','f2+f6','f3+f5','f4+f7']){
+    const [a,b]=c.split('+');let det=0,dx=0;
+    for(let s=1;s<=N;s++){const {e,dg}=run1(c,6000+s);if(e.L.comb!==null)det++;if([S.TRUTH[a],S.TRUTH[b]].includes(dg.code))dx++}
+    assert.ok(det>=0.9*N&&dx>=0.9*N,`${c}: topildi ${det}/${N}, tashxis ${dx}/${N}`);
+  }
+});
+
+test('shovqin ×2 da soxta signal kam (≤ 10 %), nosozlik baribir topiladi',()=>{
+  const Pn={...P,noise:2};let fa=0;
+  for(let s=1;s<=30;s++){const run=S.runPlant('normal',S.rngMake(1000+s),Pn);const e=S.analyseRun(run,S.computeIndex(run.d,model,Pn),Pn);if(e.fired.warn||e.fired.diag)fa++}
+  assert.ok(fa<=3,'soxta '+fa+'/30');
+  for(const kind of ['f2','f4','f6']){let det=0;for(let s=1;s<=N;s++){const run=S.runPlant(kind,S.rngMake(2000+s),Pn);const e=S.analyseRun(run,S.computeIndex(run.d,model,Pn),Pn);if(e.L.comb!==null)det++}assert.ok(det>=0.9*N,`${kind}: ${det}/${N}`)}
+});
+
+test('sekin rivojlanayotgan nosozlik himoya ishlashidan oldin topiladi',()=>{
+  for(const kind of ['f1','f2','f4']){let tr=0,det=0;
+    for(let s=1;s<=N;s++){const run=S.runPlant(kind,S.rngMake(7000+s),{...P,slow:3});const e=S.analyseRun(run,S.computeIndex(run.d,model,P),P);if(run.trips.length){tr++;if(e.L.comb!==null)det++}}
+    assert.ok(tr>0&&det===tr,`${kind}: ${det}/${tr}`);
+  }
+});

@@ -13,9 +13,12 @@ Nam materialni quritish qurilmasining brauzerdagi simulyatori: jarayon modeli, P
 | `js/config.js` | **Jarayon parametrlari — yagona manba** |
 | `js/sim.js` | Jarayon modeli, PLC himoyasi, qoldiqlar, xavf indeksi, tashxis, Excel o‘qish/yozish |
 | `js/app.js` | Interfeys, grafiklar, mnemosxema, ommaviy sinov |
+| `js/journal.js` | Hodisalar jurnali, tasdiqlash (ACK), CSV eksport |
+| `js/i18n.js` | UZ / RU / EN tarjimalari |
 | `js/sprites.js` | Mnemosxema tasvirlari (base64) |
 | `js/scene3d.bundle.js`, `js/scene3d-view.js`, `js/pdf-quiz.js`, `js/mn3d.js` | 3D sahna, PDF hisobot, operator mashqi |
 | `tests/` | Avtomatik sinovlar (`npm test`) |
+| `tools/benchmark.js` | AI ni EWMA / CUSUM bilan solishtirish (`npm run benchmark` → `docs/BENCHMARK.md`) |
 | `docs/METODOLOGIYA.md` | Model taxminlari, cheklovlar, yo‘l xaritasi |
 
 ## Sinov
