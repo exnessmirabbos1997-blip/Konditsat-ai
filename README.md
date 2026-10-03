@@ -1,4 +1,4 @@
-# Quritgich AI — erta ogohlantirish va hodisa tahlili
+# Quritgich aparat AI — erta ogohlantirish va hodisa tahlili
 
 Nam materialni quritish qurilmasining brauzerdagi simulyatori: jarayon modeli, PLC himoyasi, AI xavf indeksi (Isolation Forest + fizik qoldiqlar), sabab tashxisi, mnemosxema va 3D ko‘rinish.
 
