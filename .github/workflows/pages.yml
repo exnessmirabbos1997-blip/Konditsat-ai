@@ -1,6 +1,8 @@
-# GitHub Pages: repo sozlamalarida Settings → Pages → Source = "GitHub Actions" tanlangach ishlaydi.
+# GitHub Pages: main branchga har merge'dan keyin avtomatik yangilanadi (Settings → Pages → Source = "GitHub Actions" bo'lishi kerak).
 name: Pages
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

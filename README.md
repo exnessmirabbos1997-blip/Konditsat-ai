@@ -25,4 +25,4 @@ npm test
 Sinovlar: normal ishda soxta signal yo‘qligi, har bir nosozlik turi topilishi va sababi to‘g‘ri aniqlanishi, massa/energiya balansi, ±10 % o‘lchov xatosiga chidamlilik, Matematik model matni bilan `config.js` mosligi. GitHub Actions har push va PRda ishga tushiradi.
 
 ## GitHub Pages
-Settings → Pages → Source: **GitHub Actions**, so‘ng Actions bo‘limida "Pages" ishini qo‘lda ishga tushiring.
+Settings → Pages → Source: **GitHub Actions**. Sayt `main` branchga har merge’dan keyin avtomatik yangilanadi (Actions → "Pages" dan qo‘lda ham ishga tushirish mumkin).
