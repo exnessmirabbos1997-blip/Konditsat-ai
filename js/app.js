@@ -660,7 +660,8 @@ function kvPanel(){
   `<span>TT01 / TT02</span><span>${nb(d.TT01[k],0)} / ${nb(d.TT02[k],1)} °C</span><span>Gaz / havo (λ)</span><span>${nb(d.FT01[k],0)} / ${nb(d.FT02[k],0)} m³/soat (${nb(d.LAM[k],2)})</span>`+
   `<span>Bunker LT01 / WT</span><span>${nb(d.LT01[k],1)} % / ${nb(d.WT[k],2)} t/soat</span><span>Namlik AT01 → AT02</span><span>${nb(d.AT01[k],1)} → ${nb(d.AT02[k],2)} % (model: ${nb(id.res.wPred[k],1)} %)</span>`+
   `<span>Indeks R</span><span>${fmt(id.R[k],2)}</span><span>Eng yaqin hodisa</span><span>${EV[id.sif[k]].name}</span><span>Hodisagacha (joriy tezlikda)</span><span>${isFinite(tt)?'~'+fmt(tt,0)+' min':'—'}</span>`;
-  $('msgs').innerHTML=aiMsgs(k).map(([c,t])=>`<li class="${c}">${esc(t)}</li>`).join('');
+  const PRI={t:0,w:1,d:2,ok:3},PL={t:'Kritik',w:'Ogohlantirish',d:'Diagnostika',ok:'Holat'};
+  $('msgs').innerHTML=aiMsgs(k).sort((a,b)=>(PRI[a[0]]??9)-(PRI[b[0]]??9)).map(([c,t])=>`<li class="${c}"><span class="pri" data-pl="${c}">${window.tr?tr(PL[c]||''):(PL[c]||'')}</span>${esc(t)}</li>`).join('');
 }
 function bars(){
   const id=cur.idx,a=cur.e.a,T=id.R.length;const k=hover>=0?hover:(a.warn>=0&&prog>=T-1?a.warn:Math.min(prog,T-1));
@@ -675,7 +676,7 @@ function render(){
     const truth=$('truth').checked&&mode==='sim';
     const vl=[{k:a.trip,c:css('--trip'),wd:1.5},{k:cur.run.ft,c:css('--gray'),dash:[2,3]}];
     draw($('c1'),{ys:[{y:d.TT01,c:css('--ink'),wd:1.6}],min:800,max:1250,dec:0,lines:[{v:1120,c:css('--gray'),t:'H 1120'},{v:1180,c:css('--trip'),t:'HH 1180',dash:[8,3],r:1}],vl});
-    const ys2=[{y:d.TT02,c:css('--ink'),wd:1.6}];if(truth)ys2.push({y:d.trueTT02,c:css('--idx'),wd:1.2,dash:[4,3]});
+    const ys2=[{y:d.TT02,c:css('--ink'),wd:1.6}];{const tm=id.res.Tmix,band=sg=>Float64Array.from(tm,v=>v+sg*24);ys2.push({y:tm,c:css('--mut'),wd:1,dash:[1,3]},{y:band(1),c:css('--mut'),wd:0.8,dash:[1,3]},{y:band(-1),c:css('--mut'),wd:0.8,dash:[1,3]})}if(truth)ys2.push({y:d.trueTT02,c:css('--idx'),wd:1.2,dash:[4,3]});
     draw($('c2'),{ys:ys2,min:250,max:480,dec:0,lines:[{v:P.sp,c:css('--ok'),t:'SP '+fmt(P.sp,0)},{v:380,c:css('--gray'),t:'H 380'},{v:400,c:css('--trip'),t:'HH 400',dash:[8,3],r:1}],vl});
     draw($('c3'),{ys:[{y:d.LAM,c:css('--ink'),wd:1.5}],min:0.7,max:1.5,dec:2,lines:[{v:1.05,c:css('--gray'),t:'L 1,05'},{v:0.95,c:css('--trip'),t:'LL 0,95',dash:[8,3],r:1}],vl});
     const ys4=[{y:d.AT02,c:css('--ink'),wd:1.6},{y:d.AT01,c:css('--mut'),wd:1.1},{y:id.res.wPred,c:css('--warn'),wd:1,dash:[4,3]}];if(truth)ys4.push({y:d.trueW,c:css('--idx'),wd:1,dash:[2,2]});
@@ -855,11 +856,11 @@ $('xExp').onclick=()=>{if(!cur)return;const d=cur.run.d,id=cur.idx,T=d.TT01.leng
 function tickClock(){const d=new Date();$('clock').textContent=d.toLocaleDateString('uz-UZ')+' '+d.toLocaleTimeString('uz-UZ')}setInterval(tickClock,1000);tickClock();
 $('theme').onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==='light'?'':'light';if(cur)render()};
 $('refresh').onclick=()=>$('run').click();
-const VIEWS={overview:'Umumiy ko‘rinish',mimic:'Mnemosxema','3d':'3D ko‘rinish',trends:'Trendlar',ai:'AI xabarlari va indeks',review:'Hodisa tahlili (Review)',batch:'Ommaviy sinov',data:'O‘z ma’lumotingiz',math:'Matematik model',settings:'Sozlamalar'};
-const LIVE=['overview','mimic','3d','trends','ai','review'];
+const VIEWS={overview:'Umumiy ko‘rinish',mimic:'Mnemosxema','3d':'3D ko‘rinish',trends:'Trendlar',ai:'AI xabarlari va indeks',review:'Hodisa tahlili (Review)',journal:'Hodisalar jurnali',batch:'Ommaviy sinov',data:'O‘z ma’lumotingiz',math:'Matematik model',settings:'Sozlamalar'};
+const LIVE=['overview','mimic','3d','trends','ai','review','journal'];
 function moveTo(node,view,slot){const pl=document.querySelector(`#v-${view} [data-place="${slot}"]`);if(pl&&node.parentNode!==pl)pl.appendChild(node)}
 function showView(v){if(!VIEWS[v])v='overview';document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
-  $('crumb').textContent=VIEWS[v];$('ctrl').style.display=LIVE.includes(v)?'':'none';
+  $('crumb').textContent=window.tr?tr(VIEWS[v]):VIEWS[v];$('crumb').dataset.v=v;$('ctrl').style.display=LIVE.includes(v)?'':'none';
   if(v==='overview'||v==='mimic')moveTo($('mimic'),v,'mimic');if(v==='overview'||v==='ai'){moveTo($('kvwrap'),v,'kv');moveTo($('barswrap'),v,'bars')}
   if(history.replaceState)history.replaceState(null,'','#'+v);window.scrollTo({top:0});lastW=0;if(cur)render()}
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
