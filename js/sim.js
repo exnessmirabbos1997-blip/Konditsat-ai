@@ -20,12 +20,13 @@ function plantDefaults(){const c=JSON.parse(JSON.stringify(CONFIG.plant));c.dt=D
 // o'zgaruvchi nomlari
 const VARS=['TT01','TT02','FT01','FT02','FT03','LT01','WT','AT01','AT02','U11','U12','U13','M01','M02','LAM','FIN'];
 function runPlant(kind,r,P){
+  const KS=new Set(kind.split('+'));   // 'f1+f4' — bir vaqtda ikki nosozlik
   const N=P.N,dt=P.dt,nz=P.noise;const S=()=>P.sev>0?P.sev:r();
   const d={};for(const v of VARS)d[v]=new Float64Array(N);d.trueTT02=new Float64Array(N);d.trueW=new Float64Array(N);d.burner=new Uint8Array(N);d.feeder=new Uint8Array(N);d.conv=new Uint8Array(N);
-  let L=kind==='f5'?20+r()*25:(kind==='f6'||kind==='f7')?75+r()*12:35+r()*35;
+  let L=KS.has('f5')?20+r()*25:(KS.has('f6')||KS.has('f7'))?75+r()*12:35+r()*35;
   let win=P.win+gauss(r)*1.0,Tf=1050,Td=P.sp,wout=4,ou=0,ow=0,integ=0,uG=62,uA=61,burner=true,feeder=true,conv=true;
   let ft=-1,nfT=0,bTripK=-1,lwT=0,hidK=-1;const t0=Math.floor((15+r()*100)/dt);          // nosozlik boshlanishi
-  const sv=S(),tauFault=(20+60*r())/dt;
+  const sv=S(),tauFault=(20+60*r())*(P.slow||1)/dt;
   const dW=7+6*sv,hAir=0.55-0.25*sv,leakMax=300+150*sv,drift=60+60*sv,jam=0.4-0.3*sv,rot=0.4-0.3*sv;
   const buf=new Float64Array(Math.round(P.delayP/dt)+1);let bi=0;buf.fill(4);
   const ev=[],trips=[],done={};let lastTT02=P.sp,lastFT02=null;
@@ -34,24 +35,24 @@ function runPlant(kind,r,P){
   for(let kk=0;kk<N+B;kk++){
     const k=kk-B;const rec=k>=0;const kx=Math.max(0,k);
     const t=k*dt;const fk=Math.max(0,Math.min(1,(k-t0)/tauFault));const on=rec&&k>=t0&&kind!=='normal';
-    if(on&&ft<0){ft=k;ev.push({k,src:'truth',code:TRUTH[kind]})}
+    if(on&&ft<0){ft=k;ev.push({k,src:'truth',code:TRUTH[kind.split('+')[0]]})}
     // tashqi ta'sirlar
     ou+=(-ou/40)*dt+0.12*Math.sqrt(dt)*gauss(r);ow+=(-ow/60)*dt+0.10*Math.sqrt(dt)*gauss(r);
-    let Fin=conv?P.Fin*(1+0.05*ou):0; if(kind==='f5'&&on)Fin=0;
-    let winT=win+ow; if(kind==='f1'&&on)winT+=dW*fk;
+    let Fin=conv?P.Fin*(1+0.05*ou):0; if(KS.has('f5')&&on)Fin=0;
+    let winT=win+ow; if(KS.has('f1')&&on)winT+=dW*fk;
     // ta'minlagich
-    let eff=1; if(kind==='f6'&&on)eff=1-(1-jam)*fk;
+    let eff=1; if(KS.has('f6')&&on)eff=1-(1-jam)*fk;
     // M02 — bunker aralashtirgichi: to'xtasa material osilib qoladi (gumbaz), ta'minot kamayadi
-    let rh=1; if(kind==='f7'&&on){rh=1-0.9*Math.min(1,(k-t0)/Math.max(1,tauFault*0.2));eff*=1-(1-rot)*fk}
+    let rh=1; if(KS.has('f7')&&on){rh=1-0.9*Math.min(1,(k-t0)/Math.max(1,tauFault*0.2));eff*=1-(1-rot)*fk}
     let Ff=feeder?P.Ffeed_max*P.uM01/100*eff:0; if(L<=0.5)Ff=Math.min(Ff,Fin);
     L=clip(L+(Fin-Ff)/P.Mb*100*dt/60,0,100);
     const m02=P.uM02*rh;
     // gorelka: PI (TT02 o'lchangan) -> 1-2; havo oqimi PI -> 1-1
     const TT02m_prev=lastTT02;
     if(burner){const e=P.sp-TT02m_prev;integ=clip(integ+e*dt/P.Ti,-400,400);uG=clip(62+P.Kp*(e+integ),5,100)}else uG=0;
-    let Qg=uG/100*P.Qg_max; if(kind==='f3'&&on&&burner)Qg+=leakMax*fk; if(!burner)Qg=0;
+    let Qg=uG/100*P.Qg_max; if(KS.has('f3')&&on&&burner)Qg+=leakMax*fk; if(!burner)Qg=0;
     const target=P.lam*P.Lst*Math.max(Qg,40);
-    let ha=1; if(kind==='f2'&&on)ha=1-(1-hAir)*fk;
+    let ha=1; if(KS.has('f2')&&on)ha=1-(1-hAir)*fk;
     const Qa1_prev=lastFT02===null?target:lastFT02; uA=clip(uA+0.02*(target-Qa1_prev)*dt*6/60,5,100);
     const Qa1=uA/100*P.Qa1_max*ha; const Qa2=P.u3/100*P.Qa2_max;
     const lam=Qg>1?Qa1/(P.Lst*Qg):9.99;
@@ -66,7 +67,7 @@ function runPlant(kind,r,P){
     const wStar=water>0.01?Math.max(0.8,winT*Math.exp(-P.beta*E/water)):wout;
     wout+=(wStar-wout)*dt/P.tauP; buf[bi]=wout;bi=(bi+1)%buf.length;const wDel=buf[bi];
     // TT02 datchigi
-    let TT02m=Td+bias.TT02+gauss(r)*1.5*nz; if(kind==='f4'&&on)TT02m-=drift*fk; TT02m=Math.max(P.T0,TT02m);
+    let TT02m=Td+bias.TT02+gauss(r)*1.5*nz; if(KS.has('f4')&&on)TT02m-=drift*fk; TT02m=Math.max(P.T0,TT02m);
     const m={TT01:Tf+bias.TT01+gauss(r)*3*nz,TT02:TT02m,trueTT02:Td,FT01:Qg*(1+bias.FT01+gauss(r)*0.008*nz),FT02:Qa1*(1+bias.FT02+gauss(r)*0.008*nz),FT03:Qa2*(1+gauss(r)*0.008*nz),
       LT01:L+gauss(r)*0.3*nz,WT:Ff*(1+gauss(r)*0.015*nz),AT01:winT+gauss(r)*0.15*nz,AT02:Math.max(0,wDel+gauss(r)*0.1*nz),trueW:wout,U11:uA,U12:uG,U13:P.u3,M01:feeder?P.uM01:0,M02:m02+gauss(r)*0.3*nz,FIN:Fin};
     m.LAM=m.FT01>20?m.FT02/(P.Lst*m.FT01):NaN;
@@ -108,7 +109,9 @@ function residuals(d,P){
   }
   const w=Math.round(15/P.dt);
   for(let k=0;k<N;k++){const a=Math.max(0,k-w);let sw=0;for(let j=a;j<=k;j++)sw+=d.WT[j];sw/=(k-a+1);
-    const dL=(d.LT01[k]-d.LT01[a])/Math.max(1,(k-a))/P.dt;o.inflow[k]=k<w?P.Fin:sw+dL*P.Mb/100*60;
+    let sx=0,sy=0,n=k-a+1;for(let j=a;j<=k;j++){sx+=j;sy+=d.LT01[j]}const mx=sx/n,my=sy/n;let sxy=0,sxx=0;for(let j=a;j<=k;j++){sxy+=(j-mx)*(d.LT01[j]-my);sxx+=(j-mx)*(j-mx)}
+    const dL=sxx>0?sxy/sxx/P.dt:0;   // LT01 qiyaligi — eng kichik kvadratlar (oxirgi nuqtalar farqidan shovqinga ~4 marta chidamliroq)
+    o.inflow[k]=k<w?P.Fin:sw+dL*P.Mb/100*60;
     o.rI[k]=k<w?0:(o.inflow[k]-P.Fin)/1.0;                        // bunker massa balansi: taxminiy kelim - nominal
     o.rW[k]=isFinite(d.AT01[k])?(d.AT01[k]-P.win)/1.0:0;}         // kirish namligi - nominal
   return o;
@@ -134,7 +137,9 @@ function computeIndex(d,model,P){
     Q.forEach((n,q)=>{if(sc[q]!==1)for(let k=0;k<N;k++)R[n][k]/=sc[q]})}
   const out={R:new Float64Array(N),x:[[],[],[],[]],sif:new Int8Array(N),ttt:new Float64Array(N),d3:new Uint8Array(N),d4:new Uint8Array(N),res:R,iso:new Float64Array(N),rmax:new Float64Array(N),rarg:new Int8Array(N)};
   const soft=new Float64Array(N);for(let k=0;k<N;k++)soft[k]=isFinite(R.Tmix[k])?Math.max(d.TT02[k],R.Tmix[k]-10):d.TT02[k];   // TT02 yumshoq datchik bilan
-  const val={TT01:d.TT01,TT02:soft,LAM:d.LAM,LT01:d.LT01,AT02:d.AT02};
+  const sm=(a,n)=>{const o=new Float64Array(a.length);let s=0,c=0;const q=[];for(let k=0;k<a.length;k++){const v=a[k];if(isFinite(v)){q.push(v);s+=v;c++;if(q.length>n){s-=q.shift();c--}}o[k]=c?s/c:NaN}return o};
+  const SMN=Math.max(1,Math.round(Math.max(1,P.noise||1)/P.dt));   // 1 daqiqalik harakatlanuvchi o'rtacha: bitta shovqinli o'lchov "alarmga yaqin" deb hisoblanmasin
+  const val={TT01:sm(d.TT01,SMN),TT02:sm(soft,SMN),LAM:sm(d.LAM,SMN),LT01:sm(d.LT01,SMN),AT02:sm(d.AT02,SMN)};
   const thr={TT01:0.5,TT02:0.3,LAM:0.002,LT01:0.02,AT02:0.01};
   for(let k=0;k<N;k++){
     let best=-1,bj=0,btt=Infinity,bx1=0,bx2=0;
