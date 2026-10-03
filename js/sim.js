@@ -127,7 +127,7 @@ function trainIF(data,nTrees,sub,seed){const r=rngMake(seed);const trees=[];cons
 // qoldiqlarni normal ma'lumotdagi tarqoqlikka moslash: p99(|r|) > 2,5 bo'lsa (shovqin ko'p) shu ustun kengaytiriladi, aks holda 1
 function fitScale(data){const q=data[0].length,sc=[];for(let j=0;j<q;j++){const a=data.map(x=>Math.abs(x[j])).sort((u,v)=>u-v);const p99=a[Math.floor(a.length*0.99)]||0;sc.push(Math.max(1,p99/2.5))}return sc}
 function trainIFS(data,nTrees,sub,seed){const sc=fitScale(data);const m=trainIF(data.map(x=>x.map((v,i)=>v/sc[i])),nTrees,sub,seed);m.sc=sc;return m}
-function trainModel(P,seed){const r=rngMake(seed);let data=[];for(let i=0;i<P.nTrain;i++){const run=runPlant('normal',r,P);const X=features(run.d,P).X;for(let k=30;k<X.length;k+=2)data.push(X[k])}return trainIFS(data,P.nTrees,P.sub,seed+1)}
+function trainModel(P,seed){const r=rngMake(seed);let data=[];for(let i=0;i<P.nTrain;i++){const run=runPlant('normal',r,P);const X=features(run.d,P).X;for(let k=30;k<X.length;k+=2)data.push(X[k])}const m=trainIFS(data,P.nTrees,P.sub,seed+1);m.noise=P.noise||1;return m}
 // ---- dinamik xavf indeksi ----
 function slopeOf(a,k,w,dt){const i=Math.max(0,k-w);let s1=0,n1=0,s2=0,n2=0;for(let j=i;j<=Math.min(k,i+2);j++)if(isFinite(a[j])){s1+=a[j];n1++}for(let j=Math.max(i,k-2);j<=k;j++)if(isFinite(a[j])){s2+=a[j];n2++}if(!n1||!n2||k-i<3)return 0;return (s2/n2-s1/n1)/((k-i-2)*dt)}
 function computeIndex(d,model,P){
@@ -141,6 +141,7 @@ function computeIndex(d,model,P){
   const SMN=Math.max(1,Math.round(Math.max(1,P.noise||1)/P.dt));   // 1 daqiqalik harakatlanuvchi o'rtacha: bitta shovqinli o'lchov "alarmga yaqin" deb hisoblanmasin
   const val={TT01:sm(d.TT01,SMN),TT02:sm(soft,SMN),LAM:sm(d.LAM,SMN),LT01:sm(d.LT01,SMN),AT02:sm(d.AT02,SMN)};
   const thr={TT01:0.5,TT02:0.3,LAM:0.002,LT01:0.02,AT02:0.01};
+  const rn=Math.max(1,(P.noise||1)/(model.noise||1)),zf=rn>1?[1,rn,rn,rn,1,1,1]:null;   // Isolation Forest kirishi: oqim o'lchagichlari (r_G, r_A, r_F) shovqini oshgan bo'lsa shu nisbatga bo'linadi (tashxis qoldiqlari o'zgarmaydi)
   for(let k=0;k<N;k++){
     let best=-1,bj=0,btt=Infinity,bx1=0,bx2=0;
     for(let j=0;j<EV.length;j++){const e=EV[j];if(e.hidden)continue;const a=val[e.v],y=a[k];if(!isFinite(y))continue;
@@ -154,7 +155,7 @@ function computeIndex(d,model,P){
       const x2=clip(1-tt/Th,0,1);const s=w[0]*x1+w[1]*x2;
       if(s>best){best=s;bj=j;btt=tt;bx1=x1;bx2=x2}}
     const xi=X[k];let rm=0,ra=0;for(let q=0;q<7;q++){if(Math.abs(xi[q])>rm){rm=Math.abs(xi[q]);ra=q}}
-    const iso=k<W?0:clip((ifScore(model,xi)-model.smin)/(model.smax-model.smin),0,1);
+    const iso=k<W?0:clip((ifScore(model,zf?xi.map((v,q)=>v/zf[q]):xi)-model.smin)/(model.smax-model.smin),0,1);
     const x3=Math.max(iso,clip((rm-3)/2,0,1)),x4=clip((rm-3)/4,0,1);
     out.x[0].push(bx1);out.x[1].push(bx2);out.x[2].push(x3);out.x[3].push(x4);out.sif[k]=bj;out.ttt[k]=btt;out.iso[k]=iso;out.rmax[k]=rm;out.rarg[k]=ra;
     out.R[k]=clip(w[0]*bx1+w[1]*bx2+w[2]*x3+w[3]*x4,0,1);

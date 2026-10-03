@@ -72,6 +72,14 @@ test('shovqin ×2 da soxta signal kam (≤ 10 %), nosozlik baribir topiladi',()=
   for(const kind of ['f2','f4','f6']){let det=0;for(let s=1;s<=N;s++){const run=S.runPlant(kind,S.rngMake(2000+s),Pn);const e=S.analyseRun(run,S.computeIndex(run.d,model,Pn),Pn);if(e.L.comb!==null)det++}assert.ok(det>=0.9*N,`${kind}: ${det}/${N}`)}
 });
 
+test('shovqin ×3 da soxta signal ≤ 20 %, tashxis ishlashda qoladi',()=>{
+  const Pn={...P,noise:3};let fa=0;
+  for(let s=1;s<=30;s++){const run=S.runPlant('normal',S.rngMake(1000+s),Pn);const e=S.analyseRun(run,S.computeIndex(run.d,model,Pn),Pn);if(e.fired.warn||e.fired.diag)fa++}
+  assert.ok(fa<=6,'soxta '+fa+'/30');
+  let dx=0;for(let s=1;s<=N;s++){const run=S.runPlant('f4',S.rngMake(2000+s),Pn);if(S.diagnose(run,S.computeIndex(run.d,model,Pn),Pn).code==='tt02')dx++}
+  assert.ok(dx>=0.8*N,'f4 tashxis '+dx+'/'+N);
+});
+
 test('sekin rivojlanayotgan nosozlik himoya ishlashidan oldin topiladi',()=>{
   for(const kind of ['f1','f2','f4']){let tr=0,det=0;
     for(let s=1;s<=N;s++){const run=S.runPlant(kind,S.rngMake(7000+s),{...P,slow:3});const e=S.analyseRun(run,S.computeIndex(run.d,model,P),P);if(run.trips.length){tr++;if(e.L.comb!==null)det++}}
