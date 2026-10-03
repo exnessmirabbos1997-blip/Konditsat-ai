@@ -787,19 +787,21 @@ $('show').onclick=()=>{clearInterval(timer);timer=null;prog=cur?cur.run.d.TT01.l
 ['kind','seed'].forEach(id=>$(id).onchange=()=>{if(mode==='sim')runSimNow(false)});
 window.addEventListener('resize',()=>{const w=window.innerWidth;if(w!==lastW){lastW=w;if(cur)render()}});
 function retrain(){simModel=trainModel({...P,noise:1,sev:0},7);model=simModel}
-$('apply').onclick=()=>{readPlant();$('status').textContent='Model qayta o‘qitilmoqda…';setTimeout(()=>{retrain();lastBatch=null;$('bOut').innerHTML='';if(mode==='sim')runSimNow(false);$('status').textContent='Parametrlar qo‘llandi, model qayta o‘qitildi.'},30)};
+$('apply').onclick=()=>{readPlant();$('status').textContent='Model qayta o‘qitilmoqda…';setTimeout(()=>{retrain();lastBatch=null;$('bOut').innerHTML='';$('rocCv').classList.add('hide');$('rocCap').classList.add('hide');if(mode==='sim')runSimNow(false);$('status').textContent='Parametrlar qo‘llandi, model qayta o‘qitildi.'},30)};
 $('reset').onclick=()=>{const map={pSP:'sp',pFin:'Fin',pM01:'uM01',pM02:'uM02',pU3:'u3',pWin:'win',pMb:'Mb',pTh:'Th',pTresp:'Tresp'};for(const id in map)$(id).value=PDEF[map[id]];$('apply').click()};
 // ---------- ommaviy sinov ----------
 const METH=[['alarm','Mavjud PLC alarmlari'],['warn','AI indeksi R'],['diag','AI diagnostika'],['comb','Birgalikda (alarm + indeks + diagnostika)']];
 async function batchAsync(Pb,mdl,seed,nF,nN,cb){
-  const r=rngMake(seed);const res={per:{},m:{},dx:{}};for(const [k] of METH)res.m[k]={leads:[],miss:0,fa:0};let done=0;const tot=FAULTS.length*nF+nN;
+  const r=rngMake(seed);const res={per:{},m:{},dx:{},sc:{n:[],f:[]}};for(const [k] of METH)res.m[k]={leads:[],miss:0,fa:0};let done=0;const tot=FAULTS.length*nF+nN;
   for(const kind of FAULTS){res.per[kind]={n:0,trip:0};res.dx[kind]=[0,0];for(const [k] of METH)res.per[kind][k]=[];
     for(let i=0;i<nF;i++){const run=runPlant(kind,r,Pb);const idx=computeIndex(run.d,mdl,Pb);const e=analyseRun(run,idx,Pb);const dg=diagnose(run,idx,Pb);
       res.dx[kind][1]++;if(dg.code===TRUTH[kind])res.dx[kind][0]++;res.per[kind].n++;
+      {const a0=Math.max(0,run.ft-Math.round(5/Pb.dt)),b0=run.trips.length?run.trips[0].k:idx.R.length-1;let m=0;for(let q=a0;q<=b0;q++)m=Math.max(m,idx.R[q]);res.sc.f.push(m)}
       if(e.a.trip>=0){res.per[kind].trip++;for(const [k] of METH){if(e.L[k]===null){res.m[k].miss++;res.per[kind][k].push(null)}else{res.m[k].leads.push(e.L[k]);res.per[kind][k].push(e.L[k])}}}
       done++;if(done%2===0){cb&&cb(done/tot);await tick()}}}
   res.dx.normal=[0,0];
   for(let i=0;i<nN;i++){const run=runPlant('normal',r,Pb);const idx=computeIndex(run.d,mdl,Pb);const e=analyseRun(run,idx,Pb);for(const [k] of METH)if(e.fired[k])res.m[k].fa++;
+    {let m=0;for(let q=Math.round(30/Pb.dt);q<idx.R.length;q++)m=Math.max(m,idx.R[q]);res.sc.n.push(m)}
     const dg=diagnose(run,idx,Pb);res.dx.normal[1]++;if(dg.code==='none')res.dx.normal[0]++;done++;if(done%2===0){cb&&cb(done/tot);await tick()}}
   res.nN=nN;res.nTrip=FAULTS.reduce((s,k)=>s+res.per[k].trip,0);
   for(const [k] of METH){const l=res.m[k].leads,n=l.length+res.m[k].miss;res.m[k].mean=l.length?l.reduce((a,b)=>a+b,0)/l.length:NaN;res.m[k].min=l.length?Math.min(...l):NaN;res.m[k].ok=n?l.filter(x=>x>=Pb.Tresp).length/n:NaN;res.m[k].far=res.m[k].fa/nN}
@@ -809,6 +811,17 @@ async function guard(ids,fn){if(working)return;working=true;ids.forEach(i=>$(i).
   try{await fn()}catch(e){$('bOut').innerHTML='<p class="msg">Xato: '+esc(String(e.message||e))+'</p>'}working=false;ids.forEach(i=>$(i).disabled=false);$('prog').classList.add('hide')}
 const nf=(x,d)=>isFinite(x)?fmt(x,d):'—';
 const tbl=(rows,hdr)=>'<div class="tw"><table><tr>'+hdr.map(h=>`<th>${h}</th>`).join('')+'</tr>'+rows.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')+'</table></div>';
+function rocPts(sc){const all=[...new Set([...sc.n,...sc.f])].sort((a,b)=>a-b);const p=all.map(t=>[sc.n.filter(x=>x>=t).length/sc.n.length,sc.f.filter(x=>x>=t).length/sc.f.length]);p.push([0,0],[1,1]);p.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);let auc=0;for(let i=1;i<p.length;i++)auc+=(p[i][0]-p[i-1][0])*(p[i][1]+p[i-1][1])/2;return {p,auc}}
+function drawRoc(sc){const cv=$('rocCv');if(!cv||!sc.n.length||!sc.f.length)return;cv.classList.remove('hide');$('rocCap').classList.remove('hide');
+  const {p,auc}=rocPts(sc),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=46,R=14,T=14,B=38,X=v=>L+v*(W-L-R),Y=v=>H-B-v*(H-T-B);
+  x.clearRect(0,0,W,H);x.font='12px Segoe UI,Arial';x.fillStyle=css('--mut');x.strokeStyle=css('--line');x.lineWidth=1;
+  for(let i=0;i<=5;i++){const v=i/5;x.beginPath();x.moveTo(X(v),Y(0));x.lineTo(X(v),Y(1));x.moveTo(X(0),Y(v));x.lineTo(X(1),Y(v));x.stroke();x.fillText(fmt(v,1),X(v)-8,H-B+16);x.fillText(fmt(v,1),L-28,Y(v)+4)}
+  x.fillText('FPR — normal ishda soxta signal ulushi',L+40,H-6);x.save();x.translate(12,H/2+40);x.rotate(-Math.PI/2);x.fillText('TPR — aniqlangan nosozliklar ulushi',0,0);x.restore();
+  x.setLineDash([4,4]);x.strokeStyle=css('--gray');x.beginPath();x.moveTo(X(0),Y(0));x.lineTo(X(1),Y(1));x.stroke();x.setLineDash([]);
+  x.strokeStyle=css('--idx');x.lineWidth=2;x.beginPath();p.forEach((q,i)=>i?x.lineTo(X(q[0]),Y(q[1])):x.moveTo(X(q[0]),Y(q[1])));x.stroke();
+  const fpr=sc.n.filter(v=>v>=P.RTH).length/sc.n.length,tpr=sc.f.filter(v=>v>=P.RTH).length/sc.f.length;x.fillStyle=css('--warn');x.beginPath();x.arc(X(fpr),Y(tpr),5,0,7);x.fill();
+  x.fillStyle=css('--ink');x.fillText('R* = '+fmt(P.RTH,2)+': FPR '+fmt(fpr*100,0)+' %, TPR '+fmt(tpr*100,0)+' %',X(0.32),Y(0.18));
+  $('rocCap').textContent='ROC egri chizig‘i (xavf indeksi R): AUC = '+fmt(auc,3)+'. Sariq nuqta — joriy ogohlantirish chegarasi R*. Nosozlik uchun baho oynasi: boshlanishidan 5 daqiqa oldin → himoya ishlagunicha; normal ishda 30 daqiqadan keyingi davr.'}
 const HDR=['Usul','O‘rtacha ogohlantirish muddati','Eng kichik muddat','Yetarli (≥ javob vaqti) ulushi','O‘tkazib yuborilgan','Normal ishda signal berganlar ulushi'];
 $('bRun').onclick=()=>guard(['bRun','b5'],async()=>{
   const s=Math.max(1,+$('seed').value||1)*101,r=await batchAsync({...P},simModel,s,10,50,setProg);
@@ -816,13 +829,13 @@ $('bRun').onclick=()=>guard(['bRun','b5'],async()=>{
   const mm=a=>{const v=a.filter(x=>x!==null);return v.length?fmt(v.reduce((x,y)=>x+y,0)/v.length,1)+(v.length<a.length?` (${a.length-v.length} o‘tk.)`:''):(a.length?'ishlamadi':'—')};
   const per=FAULTS.map(kind=>{const p=r.per[kind],dx=r.dx[kind];return [KINDS[kind],p.trip+' / '+p.n,mm(p.alarm),mm(p.warn),mm(p.diag),mm(p.comb),dx[0]+' / '+dx[1]]});per.push([KINDS.normal,'—','—','—','—','—',r.dx.normal[0]+' / '+r.dx.normal[1]]);
   const H2=['Holat','Hodisa / jami','PLC alarm, min','AI indeksi, min','AI diagnostika, min','Birgalikda, min','AI tashxisi to‘g‘ri'];
-  lastBatch={title:'Barcha ssenariylar (variant '+s+')',rows:[HDR,...rows],per:[H2,...per],dx:r.dxAll};
+  drawRoc(r.sc);lastBatch={title:'Barcha ssenariylar (variant '+s+')',rows:[HDR,...rows],per:[H2,...per],dx:r.dxAll};
   $('bOut').innerHTML=tbl(rows,HDR)+'<h2 style="margin:16px 0 0;font-size:14px">Holat turlari bo‘yicha</h2>'+tbl(per,H2)+`<p class="msg"><b>AI sabab tashxisi aniqligi: ${r.dxAll[0]} / ${r.dxAll[1]} (${fmt(100*r.dxAll[0]/r.dxAll[1],1)} %)</b></p><p class="note">Ogohlantirish muddati hodisa bo‘lgan ${r.nTrip} ta nosozlik bo‘yicha; “yetarli” — kamida ${fmt(P.Tresp,0)} daqiqa oldin.</p><p class="note">Normal ishda soxta signal (birgalikda usul): ${fmt(r.m[METH[METH.length-1][0]].far*100,0)} % ishlarda, taxminan ${fmt(r.m[METH[METH.length-1][0]].far/(P.N*P.dt/60),3)} ta/soat.</p>`});
 $('b5').onclick=()=>guard(['bRun','b5'],async()=>{
   const runs=[];const N=5;for(let v=1;v<=N;v++){const m=trainModel({...P,noise:1,sev:0},v*11);runs.push(await batchAsync({...P},m,v*100,10,50,f=>setProg((v-1+f)/N)))}
   const st=a=>{const b=a.filter(isFinite);return b.length?{m:b.reduce((x,y)=>x+y,0)/b.length,lo:Math.min(...b),hi:Math.max(...b)}:{m:NaN,lo:NaN,hi:NaN}};const c=(o,d,u)=>isFinite(o.m)?fmt(o.m,d)+u+' ['+fmt(o.lo,d)+'–'+fmt(o.hi,d)+']':'—';
   const rows=METH.map(([k,n])=>[n,c(st(runs.map(r=>r.m[k].mean)),1,' min'),c(st(runs.map(r=>r.m[k].min)),1,' min'),c(st(runs.map(r=>r.m[k].ok*100)),0,' %'),runs.reduce((s,r)=>s+r.m[k].miss,0)+' / '+runs.reduce((s,r)=>s+r.nTrip,0),c(st(runs.map(r=>r.m[k].far)),2,'')]);
-  const dx=runs.reduce((s,r)=>[s[0]+r.dxAll[0],s[1]+r.dxAll[1]],[0,0]);lastBatch={title:'5 ta variant bo‘yicha o‘rtacha [min–maks]',rows:[HDR,...rows],dx};
+  drawRoc({n:runs.flatMap(r=>r.sc.n),f:runs.flatMap(r=>r.sc.f)});const dx=runs.reduce((s,r)=>[s[0]+r.dxAll[0],s[1]+r.dxAll[1]],[0,0]);lastBatch={title:'5 ta variant bo‘yicha o‘rtacha [min–maks]',rows:[HDR,...rows],dx};
   $('bOut').innerHTML=tbl(rows,HDR)+`<p class="msg"><b>AI sabab tashxisi aniqligi (5 variant): ${dx[0]} / ${dx[1]} (${fmt(100*dx[0]/dx[1],1)} %)</b></p><p class="note">Har bir variantda model qayta o‘qitildi (urug‘ 11·v) va ssenariylar yangidan yaratildi (urug‘ 100·v).</p><p class="note">Normal ishda soxta signal (birgalikda usul): taxminan ${fmt(runs.reduce((a,r)=>a+r.m[METH[METH.length-1][0]].far,0)/runs.length/(P.N*P.dt/60),3)} ta/soat.</p>`});
 // ---------- o'z ma'lumotingiz ----------
 const COLS=['TT01','TT02','FT01','FT02','FT03','LT01','WT','AT01','AT02','U11','U12','M01','M02'];

@@ -11,7 +11,7 @@ Gorelka–o‘txona (birinchi tartibli inersiya), havo bilan aralashtirish, bug�
 
 ## Ma’lum cheklovlar (sinovlarda o‘lchangan)
 - **Barcha parametrlar taxminiy.** η, β, τ lar real PLC ma’lumoti bilan sozlanmagan. Natijalar (masalan 100 % tashxis) sintetik nosozliklar va shu modelning o‘zida olingan — real qurilma uchun kafolat emas.
-- **O‘lchash shovqini.** Model nominal shovqinda (×1) o‘qitilgan. Xavf indeksi chegaraga yaqinlik va qiyalikni 1 daqiqalik (shovqin oshgan sari uzoqroq) harakatlanuvchi o‘rtacha bo‘yicha hisoblaydi, bunker massa balansi esa LT01 qiyaligini eng kichik kvadratlar bilan baholaydi. Natijada soxta signal (4 soatlik normal ishlarda): ×1 da 0/30, ×2 da 0/30, ×3 da ≈ 11/30. Bundan yuqori shovqin uchun chegaralarni qayta sozlash kerak.
+- **O‘lchash shovqini.** Model nominal shovqinda (×1) o‘qitilgan. Xavf indeksi chegaraga yaqinlik va qiyalikni 1 daqiqalik (shovqin oshgan sari uzoqroq) harakatlanuvchi o‘rtacha bo‘yicha hisoblaydi, bunker massa balansi esa LT01 qiyaligini eng kichik kvadratlar bilan baholaydi. Isolation Forest kirishida oqim o‘lchagichlari qoldiqlari (r_G, r_A, r_F) shovqin nisbatiga bo‘linadi (tashxis qoldiqlari o‘zgarmaydi). Natijada soxta signal (4 soatlik normal ishlarda): ×1 da 0/30, ×2 da 0/30, ×3 da ≈ 4/30. Bundan yuqori shovqin uchun chegaralarni qayta sozlash kerak.
 - **O‘lchov asboblari masshtab xatosi** (Q_g,max, Q_a1,max, F_max ±10 %) — soxta signal ≤ 10 % ishlarda (sinov bilan tekshirilgan).
 - **Bug‘latish** empirik eksponenta bilan beriladi; nominalda E (1,02 t/soat) kirishdagi suvga (1,10 t/soat) yaqin, qat’iy massa balansi bo‘yicha mahsulot namligi ≈ 1,3 %, modelda ≈ 2,8 %. β ni real ma’lumotdan sozlash kerak.
 - **Solishtirma energiya** ≈ 9,6 MJ/kg suv — real quritgichlarga nisbatan yuqori (η = 0,5 taxmini).
@@ -25,10 +25,12 @@ Gorelka–o‘txona (birinchi tartibli inersiya), havo bilan aralashtirish, bug�
 - AI xabarlari ustuvorlik bo‘yicha saralanadi (kritik → ogohlantirish → diagnostika).
 - TT02 trendida modeldan kutilgan qiymat ±2σ chiziqlari.
 - Til: UZ / RU / EN (menyu, sarlavhalar, tugmalar, yorliqlar). Formulalar va jarayon xabarlari (AI xabarlari, Review matni) o‘zbek tilida qoladi.
+- Ommaviy sinovda ROC egri chizig‘i (AUC, joriy chegara R* nuqtasi).
+- Ssenariylar ro‘yxati (Holat turi) UZ/RU/EN da.
 - 3D: sifat tanlovi va kadr tezligi pasayganda avtomatik yengillashtirish.
 
 ## Yo‘l xaritasi (hali bajarilmagan)
 1. Real PLC trendi (kamida bir necha smena) bilan η, β, τ ni eng kichik kvadratlar usulida sozlash — **real ma’lumot kerak**.
 2. Bug‘latish modelini real ma’lumot bilan qayta sozlash (hozirgi β — taxminiy; massa balansi bo‘yicha E ≈ kirishdagi suv).
-3. Shovqin ×3 va undan yuqori uchun chegaralarni avtomatik moslash.
-4. Jarayon xabarlari va Review matnini RU/EN ga tarjima qilish; interaktiv ROC grafigi interfeysda.
+3. Shovqin ×4 va undan yuqori uchun chegaralarni avtomatik moslash.
+4. Jarayon xabarlari (AI xabarlari) va Review matnini RU/EN ga tarjima qilish — barcha jumlalar o‘zbekcha shablon bo‘lgani uchun xabar generatorini qayta yozish talab qiladi.
