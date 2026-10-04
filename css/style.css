@@ -193,3 +193,8 @@ select.tbtn{width:auto;padding:6px 8px}
   .ctrl .grow{flex:1 1 100%;font-size:12px;min-width:0}
   .hero,.view{margin-left:12px;margin-right:12px}
 }
+
+dialog{background:var(--pan);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:18px;width:min(380px,92vw)}dialog::backdrop{background:rgba(0,0,0,.6)}
+.sh{font-size:15px;margin:14px 0 6px}.kni{margin-bottom:6px}#kcList li{margin:4px 0}
+
+#rpDlg{width:min(980px,96vw);height:min(92vh,900px);padding:12px;flex-direction:column}#rpDlg[open]{display:flex}.rpH{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}

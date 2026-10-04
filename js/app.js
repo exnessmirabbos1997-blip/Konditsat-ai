@@ -8,7 +8,32 @@ const XN=['Chegaraga yaqinlik (x₁)','Hodisagacha vaqt (x₂)','Anomaliya (x₃
 const RES=['TT02 ↔ aralashma modeli','FT01 ↔ gaz klapani 1-2','FT02 ↔ havo klapani 1-1','WT ↔ shnek M01','M02 tezligi','Bunker massa balansi','Kirish namligi AT01'];
 const PDEF=plantDefaults();
 let P={...PDEF},model=null,simModel=null,cur=null,prog=0,hover=-1,timer=null,mode='sim',lastBatch=null,working=false,geo=null,lastW=0;
-for(const k in KINDS){const o=document.createElement('option');o.value=k;o.textContent=KINDS[k];$('kind').appendChild(o)}$('kind').value='f4';
+const tx=s=>window.tr?window.tr(s):s;
+// Holat turlari: nomlarini o'zgartirish va o'z nomli holatlar qo'shish (har biri asosiy modellardan biriga tayanadi)
+const KDEF={...KINDS},KBASE=Object.keys(KDEF),KIND_KEY='qkinds',KC_KEY='qkinds_custom';
+let KC=[];
+const lsGet=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}};
+const cleanName=s=>String(s).replace(/[<>&"'`]/g,'').trim().slice(0,80);
+function kindsLoad(){Object.assign(KINDS,KDEF);for(const k of Object.keys(KINDS))if(!KBASE.includes(k))delete KINDS[k];
+  const n=lsGet(KIND_KEY,{});if(n&&typeof n==='object')for(const k of KBASE)if(typeof n[k]==='string'&&cleanName(n[k]))KINDS[k]=cleanName(n[k]);
+  const c=lsGet(KC_KEY,[]);KC=(Array.isArray(c)?c:[]).filter(x=>x&&/^c\d{1,4}$/.test(x.id)&&typeof x.name==='string'&&cleanName(x.name)&&KBASE.includes(x.base)).slice(0,20).map(x=>({id:x.id,name:cleanName(x.name),base:x.base}));
+  for(const x of KC)KINDS[x.id]=x.name}
+const kindBase=k=>{const c=KC.find(x=>x.id===k);return c?c.base:k};
+function kindsRebuild(){const s=$('kind'),keep=s.value||'f4';s.textContent='';for(const k in KINDS){const o=document.createElement('option');o.value=k;o.textContent=KINDS[k];s.appendChild(o)}
+  s.value=KINDS[keep]!==undefined?keep:'f4';
+  const box=$('knBox');if(!box)return;box.textContent='';
+  for(const k of KBASE){const l=document.createElement('label');l.textContent=KDEF[k];l.htmlFor='kn_'+k;const i=document.createElement('input');i.type='text';i.id='kn_'+k;i.maxLength=80;i.value=KINDS[k];i.className='kni';box.append(l,i)}
+  const cl=$('kcList');cl.textContent='';for(const x of KC){const li=document.createElement('li');li.textContent=x.name+' — '+KDEF[x.base]+' ';const b=document.createElement('button');b.type='button';b.className='sec';b.textContent=tx('O‘chirish');b.onclick=()=>{KC=KC.filter(y=>y.id!==x.id);lsSet(KC_KEY,KC);kindsLoad();kindsRebuild()};li.appendChild(b);cl.appendChild(li)}}
+kindsLoad();kindsRebuild();$('kind').value='f4';
+{const sel=$('kcBase');for(const k of KBASE){const o=document.createElement('option');o.value=k;o.textContent=KDEF[k];sel.appendChild(o)}}
+$('knSave').onclick=()=>{const n={};for(const k of KBASE){const v=cleanName($('kn_'+k).value);if(v&&v!==KDEF[k])n[k]=v}
+  if(!lsSet(KIND_KEY,n)){$('knMsg').textContent=tx('Xato: brauzer xotirasi yopiq, saqlanmadi.');return}kindsLoad();kindsRebuild();$('knMsg').textContent=tx('Saqlandi.');if(cur)render()};
+$('knReset').onclick=()=>{try{localStorage.removeItem(KIND_KEY)}catch(e){}kindsLoad();kindsRebuild();$('knMsg').textContent=tx('Asl nomlar tiklandi.');if(cur)render()};
+$('kcAdd').onclick=()=>{const nm=cleanName($('kcName').value);if(!nm){$('knMsg').textContent=tx('Holat nomini yozing.');return}if(KC.length>=20){$('knMsg').textContent=tx('Ko‘pi bilan 20 ta o‘z holati.');return}
+  let id=1;while(KC.some(x=>x.id==='c'+id))id++;KC.push({id:'c'+id,name:nm,base:$('kcBase').value});
+  if(!lsSet(KC_KEY,KC)){KC.pop();$('knMsg').textContent=tx('Xato: brauzer xotirasi yopiq, saqlanmadi.');return}kindsLoad();kindsRebuild();$('kind').value='c'+id;$('kcName').value='';$('knMsg').textContent=tx('Qo‘shildi va tanlandi.')};
+$('kindEdit').onclick=()=>{showView('settings');const e=$('knCard');if(e)e.scrollIntoView({block:'start'})};
 function readP(){const raw=[1,2,3,4].map(i=>+$('w'+i).value);let s=raw.reduce((a,b)=>a+b,0);if(!(s>0)){raw.splice(0,4,...PDEF.w);raw.forEach((x,i)=>$('w'+(i+1)).value=x);s=1;$('status').textContent='Barcha vaznlar 0 bo‘lishi mumkin emas — standart vaznlar tiklandi.'}P.w=raw.map(x=>x/s);raw.forEach((x,i)=>$('w'+(i+1)+'v').textContent=fmt(P.w[i],2));
   P.RTH=+$('rth').value;$('rthv').textContent=fmt(P.RTH,2);P.sev=+$('sev').value;$('sevv').textContent=P.sev>0?fmt(P.sev,2):'tasodifiy';P.noise=+$('noise').value;$('noisev').textContent='×'+fmt(P.noise,2)}
 function readPlant(){const g=(id,def,lo,hi)=>{let v=parseFloat($(id).value);if(!isFinite(v))v=def;v=clip(v,lo,hi);$(id).value=v;return v};   // chegaradan tashqari qiymat qirqiladi va maydonda ko‘rsatiladi
@@ -728,7 +753,7 @@ function reviewHtml(){
   const rows=[['TT01, °C',d.TT01,0],['TT02 (o‘lchangan), °C',d.TT02,1],['FT01 gaz, m³/soat',d.FT01,0],['FT02 birlamchi havo, m³/soat',d.FT02,0],['FT03 ikkilamchi havo, m³/soat',d.FT03,0],['λ (havo/gaz)',d.LAM,2],['Klapan 1-2 (gaz), %',d.U12,0],['Klapan 1-1 (havo), %',d.U11,0],['LT01 bunker, %',d.LT01,1],['WT ta’minot, t/soat',d.WT,2],['AT01 kirish namligi, %',d.AT01,1],['AT02 mahsulot namligi, %',d.AT02,2],['M02 tezligi, %',d.M02,0]];
   const tb=rows.map(r=>{const v0=mean(r[1],...pre),v1=mean(r[1],k1-2,k1);return [r[0],nb(v0,r[2]),nb(v1,r[2]),isFinite(v0)&&isFinite(v1)?(v1-v0>=0?'+':'')+fmt(v1-v0,r[2]):'—']});
   const E=buildEvents(),C=conclusions(k0,k1);const ld=x=>x===null?'ishlamadi':fmt(x,1)+' min';
-  let h=`<p><b>${esc(mode==='sim'?KINDS[run.kind]:'Yuklangan ma’lumot')}</b></p>`;
+  let h=`<p><b>${esc(mode==='sim'?(run.label||KINDS[run.kind]):'Yuklangan ma’lumot')}</b></p>`;
   h+=`<p><b>AI tashxisi:</b> ${esc(CAUSE[dg.code])}${dg.k>=0?' ('+fmt(dg.k*dt,0)+'-daqiqadan)':''}`+(truth!==null?` <span class="pill" style="background:${ok?'var(--ok)':'var(--trip)'}">${ok?'haqiqiy sababga mos':'haqiqiy sababga mos emas'}</span>`:'')+`</p>`;
   h+=`<p>${a.trip>=0?`Hodisa: ${fmt(a.trip*dt,1)}-daqiqada — ${EV[a.tripJ].name}. Hodisadan oldingi ogohlantirishlar: PLC alarmlari — ${ld(e.L.alarm)}, AI indeksi — ${ld(e.L.warn)}, AI diagnostika — ${ld(e.L.diag)}.`:'Himoya yoki sifat hodisasi bo‘lmadi.'}</p>`;
   h+=`<h2>1. Voqealar ketma-ketligi</h2><div class="tw" tabindex="0"><table><tr><th>Vaqt, min</th><th>Manba</th><th>Hodisa</th></tr>`+E.map(v=>`<tr><td>${fmt(v.k*dt,1)}</td><td>${esc(v.src)}</td><td>${esc(v.txt)}</td></tr>`).join('')+`</table></div><p class="note">* Faqat simulyatsiyada ma’lum; real jarayonda tizim uni bevosita ko‘rmaydi.</p>`;
@@ -736,7 +761,7 @@ function reviewHtml(){
   h+=`<h2>3. Texnolog xulosasi</h2><p>${esc(C.tech)}</p>${C.tr.length?'<ul>'+C.tr.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':''}`;
   h+=`<h2>4. KIP xulosasi</h2><p>${esc(C.kip)}</p>${C.kr.length?'<ul>'+C.kr.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':''}`;
   h+=`<p class="note">Xulosa AI modeli (Isolation Forest, dinamik xavf indeksi) va fizik modellar (aralashma harorati, klapan tavsiflari, massa balansi) asosida avtomatik tuzildi. Yakuniy xulosani texnolog va KIP mutaxassisi tasdiqlashi kerak.</p>`;
-  cur.reviewRows=[['Hodisa tahlili (Review)'],['Holat',mode==='sim'?KINDS[run.kind]:'Yuklangan ma’lumot'],['AI tashxisi',CAUSE[dg.code]],...(truth!==null?[['Haqiqiy sabab bilan mosligi',ok?'mos':'mos emas']]:[]),['Hodisa',a.trip>=0?`${fmt(a.trip*dt,1)} min, ${EV[a.tripJ].name}`:'yo‘q'],['PLC alarmlari lead, min',ld(e.L.alarm)],['AI indeksi lead, min',ld(e.L.warn)],['AI diagnostika lead, min',ld(e.L.diag)],[],['Voqealar ketma-ketligi'],['Vaqt, min','Manba','Hodisa'],...E.map(v=>[+(v.k*dt).toFixed(1),v.src,v.txt]),[],['Parametr','Oldin','Hodisa paytida','O‘zgarish'],...tb,[],['Texnolog xulosasi',C.tech],...C.tr.map(x=>['',x]),[],['KIP xulosasi',C.kip],...C.kr.map(x=>['',x])];
+  cur.reviewRows=[['Hodisa tahlili (Review)'],['Holat',mode==='sim'?(run.label||KINDS[run.kind]):'Yuklangan ma’lumot'],['AI tashxisi',CAUSE[dg.code]],...(truth!==null?[['Haqiqiy sabab bilan mosligi',ok?'mos':'mos emas']]:[]),['Hodisa',a.trip>=0?`${fmt(a.trip*dt,1)} min, ${EV[a.tripJ].name}`:'yo‘q'],['PLC alarmlari lead, min',ld(e.L.alarm)],['AI indeksi lead, min',ld(e.L.warn)],['AI diagnostika lead, min',ld(e.L.diag)],[],['Voqealar ketma-ketligi'],['Vaqt, min','Manba','Hodisa'],...E.map(v=>[+(v.k*dt).toFixed(1),v.src,v.txt]),[],['Parametr','Oldin','Hodisa paytida','O‘zgarish'],...tb,[],['Texnolog xulosasi',C.tech],...C.tr.map(x=>['',x]),[],['KIP xulosasi',C.kip],...C.kr.map(x=>['',x])];
   return h;
 }
 function conclusions(k0,k1){
@@ -777,8 +802,8 @@ function conclusions(k0,k1){
   return {tech,kip,tr,kr};
 }
 // ---------- boshqaruv ----------
-function runSimNow(anim){if(!simModel)return;mode='sim';model=simModel;const r=rngMake(Math.max(1,Math.floor(+$('seed').value||1)));const run=runPlant($('kind').value,r,P);load(run);
-  $('status').textContent=KINDS[run.kind]+(run.ft>=0?' — nosozlik ~'+fmt(run.ft*P.dt,0)+'-daqiqada.':'.');
+function runSimNow(anim){if(!simModel)return;mode='sim';model=simModel;const r=rngMake(Math.max(1,Math.floor(+$('seed').value||1)));const kindSel=$('kind').value,run=runPlant(kindBase(kindSel),r,P);run.label=KINDS[kindSel];load(run);
+  $('status').textContent=(run.label||KINDS[run.kind])+(run.ft>=0?' — nosozlik ~'+fmt(run.ft*P.dt,0)+'-daqiqada.':'.');
   if(anim)play();else{prog=run.d.TT01.length;render()}}
 function play(){clearInterval(timer);prog=0;hover=-1;const T=cur.run.d.TT01.length;timer=setInterval(()=>{prog+=Math.round(1+(+$('speed').value)*2);if(prog>=T-1){prog=T-1;clearInterval(timer);timer=null}render()},40)}
 function mv(e){if(!geo||!cur)return;const rc=e.currentTarget.getBoundingClientRect();const x=e.clientX-rc.left;const k=Math.round((x-geo.m.l)/geo.pw*(geo.T-1));hover=k>=0&&k<=Math.min(prog,geo.T-1)?k:-1;render()}
@@ -799,6 +824,48 @@ $('apply').onclick=async()=>{if(working||training)return;readPlant();training=tr
   try{await retrain(st);lastBatch=null;$('bOut').innerHTML='';$('rocCv').classList.add('hide');$('rocCap').classList.add('hide');if(mode==='sim')runSimNow(false);$('status').textContent='Parametrlar qo‘llandi, model qayta o‘qitildi.'}
   catch(e){$('status').textContent='Xato: '+e.message}finally{training=false;$('apply').disabled=$('reset').disabled=false}};
 $('reset').onclick=()=>{const map={pSP:'sp',pFin:'Fin',pM01:'uM01',pM02:'uM02',pU3:'u3',pWin:'win',pMb:'Mb',pTh:'Th',pTresp:'Tresp'};for(const id in map)$(id).value=PDEF[map[id]];$('apply').click()};
+
+// ===== Haqiqiy qiymatlar (parol bilan): AES-GCM bilan shifrlangan; parol kiritilgach jarayon parametrlari yuklanadi =====
+const PMAP={pSP:'sp',pFin:'Fin',pM01:'uM01',pM02:'uM02',pU3:'u3',pWin:'win',pMb:'Mb',pTh:'Th',pTresp:'Tresp'};
+let realMode=false,sessPw=null,pwFails=0,pwLock=0;
+const vaultBox=()=>{try{const s=localStorage.getItem('qvault');if(s){const b=JSON.parse(s);if(Vault.valid(b))return b}}catch(e){}return window.REAL_VAULT||null};
+const paramsFromForm=()=>{const o={};for(const id in PMAP){const v=parseFloat($(id).value);if(isFinite(v))o[id]=v}return o};
+const paramsToForm=o=>{for(const id in PMAP)$(id).value=(o&&isFinite(o[id]))?o[id]:PDEF[PMAP[id]]};
+const say=(id,t,bad)=>{const m=$(id);m.textContent=tx(t);m.style.color=bad?'var(--trip)':'var(--ok)'};
+function askPw(msg){const d=$('pwDlg'),inp=$('pwIn');return new Promise(res=>{let done=false;$('pwMsg').textContent=msg||'';inp.value='';
+  const fin=v=>{if(done)return;done=true;d.onclose=null;if(d.open)d.close();$('pwForm').onsubmit=null;$('pwCancel').onclick=null;res(v)};
+  $('pwForm').onsubmit=e=>{e.preventDefault();fin(inp.value)};$('pwCancel').onclick=()=>fin(null);d.onclose=()=>fin(null);d.showModal();inp.focus()})}
+async function unlockReal(){
+  if(!Vault.available()){$('status').textContent=tx('Xato: bu brauzerda shifrlash mavjud emas (https yoki zamonaviy brauzer kerak).');return null}
+  const box=vaultBox();if(!box){$('status').textContent=tx('Bu nusxada saqlangan haqiqiy qiymatlar yo‘q.');return null}
+  let msg='';
+  for(;;){
+    if(pwLock>Date.now())msg=tx('Juda ko‘p urinish. Kuting')+': '+Math.ceil((pwLock-Date.now())/1000)+' s';
+    const pw=await askPw(msg);if(pw===null)return null;
+    if(pwLock>Date.now()){msg=tx('Juda ko‘p urinish. Kuting')+': '+Math.ceil((pwLock-Date.now())/1000)+' s';continue}
+    const t=await Vault.open(box,pw);
+    if(t&&typeof t==='object'){pwFails=0;return {pw,params:t.params&&typeof t.params==='object'?t.params:{}}}
+    if(++pwFails>=5){pwLock=Date.now()+30000;pwFails=0}
+    msg=tx('Parol noto‘g‘ri.')}}
+function tagsInfo(){document.body.dataset.tags=$('tags').value;const m=$('rvState');if(m)m.textContent=realMode?tx('Haqiqiy qiymatlar yoqilgan.'):tx('Anonim: standart qiymatlar.')}
+$('tags').onchange=async()=>{
+  if($('tags').value==='plant'){$('tags').value='anon';const u=await unlockReal();
+    if(u){sessPw=u.pw;realMode=true;$('tags').value='plant';paramsToForm(u.params);tagsInfo();$('apply').click()}else tagsInfo();return}
+  if(realMode){realMode=false;sessPw=null;paramsToForm(null);tagsInfo();$('apply').click()}else tagsInfo()};
+$('rvSave').onclick=async()=>{
+  if(!realMode||!sessPw)return say('rvMsg','Avval yuqoridagi “Haqiqiy” rejimini parol bilan yoqing.',1);
+  try{localStorage.setItem('qvault',JSON.stringify(await Vault.seal({params:paramsFromForm()},sessPw)))}catch(e){return say('rvMsg','Xato: brauzer xotirasi yopiq, saqlanmadi.',1)}
+  say('rvMsg','Haqiqiy qiymatlar parol bilan shifrlanib saqlandi (faqat shu qurilmada).',0)};
+$('pwChg').onclick=async()=>{const o=$('pwOld').value,n=$('pwNew').value,n2=$('pwNew2').value;
+  if(!Vault.available())return say('pwChgMsg','Xato: bu brauzerda shifrlash mavjud emas.',1);
+  const box=vaultBox();if(!box)return say('pwChgMsg','Bu nusxada saqlangan haqiqiy qiymatlar yo‘q.',1);
+  if(n.length<8)return say('pwChgMsg','Yangi parol kamida 8 belgi bo‘lishi kerak.',1);
+  if(n!==n2)return say('pwChgMsg','Yangi parol ikki marta bir xil kiritilmadi.',1);
+  const t=await Vault.open(box,o);if(!t)return say('pwChgMsg','Eski parol noto‘g‘ri.',1);
+  try{localStorage.setItem('qvault',JSON.stringify(await Vault.seal(t,n)))}catch(e){return say('pwChgMsg','Xato: brauzer xotirasi yopiq, parol saqlanmadi.',1)}
+  if(realMode)sessPw=n;$('pwOld').value=$('pwNew').value=$('pwNew2').value='';say('pwChgMsg','Parol yangilandi (faqat shu qurilmada).',0)};
+$('pwReset').onclick=()=>{if(!confirm(tx('Parol va saqlangan haqiqiy qiymatlar dastlabki (o‘rnatilgan) holatga qaytariladi. Davom etasizmi?')))return;try{localStorage.removeItem('qvault')}catch(e){}say('pwChgMsg','Dastlabki holat tiklandi.',0)};
+tagsInfo();
 // ---------- ommaviy sinov ----------
 const METH=[['alarm','Mavjud PLC alarmlari'],['warn','AI indeksi R'],['diag','AI diagnostika'],['comb','Birgalikda (alarm + indeks + diagnostika)']];
 async function batchAsync(Pb,mdl,seed,nF,nN,cb){
