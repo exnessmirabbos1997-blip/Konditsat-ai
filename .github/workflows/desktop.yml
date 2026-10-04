@@ -1,0 +1,39 @@
+# Windows uchun o'rnatiladigan dastur (.exe). Qo'lda ishga tushiriladi (Actions → "Windows dastur" → Run workflow)
+# yoki v* teg qo'yilganda. Natija: Releases bo'limida Quritgich-aparat-AI-Setup-<versiya>.exe
+name: Windows dastur
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Versiya tegi (masalan v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm test
+      - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Quritgich-aparat-AI-Windows
+          path: dist/*.exe
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: Quritgich aparat AI ${{ github.event.inputs.tag || github.ref_name }}
+          body: |
+            Windows uchun o'rnatuvchi. Dastur kod imzosiz, shuning uchun Windows birinchi ochishda SmartScreen ogohlantirishini ko'rsatishi mumkin: "Qo'shimcha ma'lumot" → "Baribir ishga tushirish".
+          files: dist/*.exe

@@ -2,8 +2,58 @@
   "name": "quritgich-aparat-ai",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "description": "Quritish qurilmasi: AI asosida erta ogohlantirish va hodisa tahlili simulyatori",
-  "scripts": { "test": "node --test tests/model.test.js tests/i18n.test.js tests/input.test.js",
-    "benchmark": "node tools/benchmark.js" }
+  "scripts": {
+    "test": "node --test tests/model.test.js tests/i18n.test.js tests/input.test.js",
+    "benchmark": "node tools/benchmark.js",
+    "desktop": "electron .",
+    "dist:win": "electron-builder --win --publish never"
+  },
+  "main": "electron/main.js",
+  "devDependencies": {
+    "electron": "33.3.1",
+    "electron-builder": "25.1.8"
+  },
+  "author": "Quritgich aparat AI",
+  "build": {
+    "appId": "uz.quritgich.aparat",
+    "productName": "Quritgich aparat AI",
+    "copyright": "Quritgich aparat AI",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**",
+      "index.html",
+      "css/**",
+      "js/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Quritgich aparat AI",
+      "artifactName": "Quritgich-aparat-AI-Setup-${version}.exe"
+    }
+  }
 }

@@ -5,8 +5,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",Rob
 header{padding:18px clamp(14px,3vw,32px) 6px}
 h1{font:600 clamp(19px,2.4vw,26px)/1.25 Georgia,"Times New Roman",serif;margin:0 0 4px}
 header p{margin:0;color:var(--mut);max-width:86ch;font-size:14px}
-main{display:grid;grid-template-columns:310px minmax(0,1fr);gap:16px;padding:12px clamp(14px,3vw,32px) 32px;align-items:start}
-@media(max-width:940px){main{grid-template-columns:minmax(0,1fr)}}
+
+
 .card{background:var(--pan);border:1px solid var(--line);border-radius:6px;padding:14px}
 .card h2{font-size:14px;margin:0 0 8px;font-weight:600}
 label{display:block;font-size:13px;color:var(--mut);margin:10px 0 3px}
