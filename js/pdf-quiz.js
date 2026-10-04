@@ -43,8 +43,7 @@ bP.onclick=()=>{if(!cur){toast('Avval simulyatsiyani ishga tushiring.');return}
  CH.forEach(c=>{h+='<h2>'+c[0]+'</h2><img src="'+chart(c[1],a,c[2],c[3],c[4])+'">'});
  const k=a.trip>=0?a.trip:d.TT01.length-1;let ms='';try{ms=aiMsgs(k).map(x=>'<p class="m">'+String(x[1]).replace(/</g,'&lt;')+'</p>').join('')}catch(e){}
  h+='<h2>AI xabarlari (hodisa vaqtida)</h2>'+(ms||'<p>Xabar yo‘q.</p>');if(snap)h+='<h2>3D ko‘rinish (hozirgi holat)</h2><img src="'+snap+'">';h+='</body></html>';
- const fr=document.createElement('iframe');fr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(fr);fr.contentDocument.open();fr.contentDocument.write(h);fr.contentDocument.close();
- setTimeout(()=>{try{fr.contentWindow.focus();fr.contentWindow.print()}catch(e){const b=new Blob([h],{type:'text/html'}),l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='hisobot.html';l.click()}setTimeout(()=>fr.remove(),60000)},600);toast('Hisobot tayyor — chop etish oynasida "PDF sifatida saqlash" ni tanlang.')};
+ Report.open(h)};
 const _r=render;render=function(){_r.apply(this,arguments);try{cmp();soundHook()}catch(e){console.error(e)}};
 const _s=showView;showView=function(v){_s.apply(this,arguments);if(v!=='3d'){stopRp();siren(false);lastTrip=false}};
 window.__k3d={report:()=>bP.onclick(),quiz,replay:()=>bR.onclick()};

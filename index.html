@@ -9,6 +9,11 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<dialog id="pwDlg" aria-labelledby="pwT"><form id="pwForm" method="dialog"><h2 id="pwT" class="sh" style="margin-top:0">Parolni kiriting</h2>
+<p class="note" style="margin-top:0">Haqiqiy qiymatlarni ko‘rish uchun parol kerak.</p>
+<label for="pwIn">Parol</label><input id="pwIn" type="password" autocomplete="current-password">
+<p class="note" id="pwMsg" role="alert" style="color:var(--trip)"></p>
+<div class="btns"><button type="submit">Tasdiqlash</button><button type="button" class="sec" id="pwCancel">Bekor qilish</button></div></form></dialog>
 <div class="app">
 <nav class="side" aria-label="Bo‘limlar">
 <div class="brand"><i>Q</i><div><b>Quritgich aparat AI</b><small>Erta ogohlantirish</small></div></div>
@@ -28,10 +33,10 @@
 <main class="mainwrap" id="main">
 <div class="topbar"><span class="crumb">Quritish qurilmasi › <b id="crumb">Umumiy ko‘rinish</b></span>
 <span class="live"><i></i><span>Simulyatsiya · Real-time<small id="clock">—</small></span></span>
-<select class="tbtn" id="lang" aria-label="Til / Язык / Language"><option value="uz">UZ</option><option value="ru">RU</option><option value="en">EN</option></select><button class="tbtn" id="theme" aria-label="Kun / tun rejimi">☾ / ☀</button><button class="tbtn pri" id="refresh">↻ Yangilash</button></div>
+<select class="tbtn" id="tags" aria-label="Qiymatlar: anonim (standart) yoki haqiqiy" title="Qiymatlar: anonim (standart) / haqiqiy (parol bilan)"><option value="anon">Anonim</option><option value="plant">Haqiqiy</option></select><select class="tbtn" id="lang" aria-label="Til / Язык / Language"><option value="uz">UZ</option><option value="ru">RU</option><option value="en">EN</option></select><button class="tbtn" id="theme" aria-label="Kun / tun rejimi">☾ / ☀</button><button class="tbtn pri" id="refresh">↻ Yangilash</button></div>
 <div class="mnav" id="mnav"><button class="mn" data-view="overview">Umumiy ko‘rinish</button><button class="mn" data-view="mimic">Mnemosxema</button><button class="mn" data-view="3d">3D ko‘rinish</button><button class="mn" data-view="trends">Trendlar</button><button class="mn" data-view="ai">AI xabarlari va indeks</button><button class="mn" data-view="review">Hodisa tahlili (Review)</button><button class="mn" data-view="journal">Hodisalar jurnali<span class="bdg"></span></button><button class="mn" data-view="batch">Ommaviy sinov</button><button class="mn" data-view="data">O‘z ma’lumotingiz</button><button class="mn" data-view="math">Matematik model</button><button class="mn" data-view="settings">Sozlamalar</button></div>
 <div class="ctrl" id="ctrl">
-<div class="f" style="min-width:260px"><label for="kind">Holat turi</label><select id="kind"></select></div>
+<div class="f" style="min-width:260px"><label for="kind">Holat turi</label><div style="display:flex;gap:6px"><select id="kind" style="flex:1;min-width:0"></select><button type="button" class="tbtn" id="kindEdit" aria-label="Holat turlarini tahrirlash" title="Holat turlarini tahrirlash">✎</button></div></div>
 <div class="f" style="min-width:90px;width:90px"><label for="seed">Variant</label><input id="seed" type="number" value="3" min="1" step="1"></div>
 <button id="run">▶ Ishga tushirish</button><button id="show" class="sec">To‘liq ko‘rsatish</button>
 <div class="f" style="min-width:120px"><label for="speed">Tezlik</label><input id="speed" type="range" min="1" max="12" step="1" value="5"></div>
@@ -179,14 +184,36 @@ r<sub>I</sub> = (WT̄ + M<sub>b</sub>·dL/dt − F<sub>kir,nom</sub>) / 1,   r<s
 </div>
 <p class="note">Himoya chegaralari: TT01 H/HH 1120/1180 °C, TT02 H/HH 380/400 °C, λ L/LL 1,05/0,95, LT01 L/LL 15/5 % va H/HH 85/95 %, AT02 H/HH 6/8 %. Qiymatlar taxminiy.</p>
 <div class="btns"><button id="apply">Qo‘llash</button><button id="reset" class="sec">Standart qiymatlar</button></div></div>
-</div></section>
+</div><div class="card" style="margin-top:14px" id="rvCard"><h2 class="sh">Haqiqiy qiymatlar (parol bilan)</h2>
+<p class="note" style="margin-top:0">Yuqoridagi “Haqiqiy” tanlansa, parol so‘raladi va saqlangan haqiqiy jarayon qiymatlari yuklanadi. Ularni kiritish: “Haqiqiy”ni yoqing, yuqoridagi “Jarayon parametrlari”ga haqiqiy qiymatlarni yozing va pastdagi tugmani bosing. Qiymatlar parol bilan shifrlanib faqat shu qurilmada saqlanadi. “Anonim”da standart (taxminiy) qiymatlar ishlaydi.</p>
+<div class="btns"><button id="rvSave" type="button">Joriy qiymatlarni haqiqiy deb saqlash</button></div>
+<p class="note" id="rvState" role="status"></p><p class="note" id="rvMsg" role="status"></p>
+<h2 class="sh">Parol</h2>
+<div class="pgrid" style="max-width:520px"><div><label for="pwOld">Joriy parol</label><input id="pwOld" type="password" autocomplete="current-password"></div>
+<div></div><div><label for="pwNew">Yangi parol (kamida 8 belgi)</label><input id="pwNew" type="password" autocomplete="new-password"></div>
+<div><label for="pwNew2">Yangi parolni takrorlang</label><input id="pwNew2" type="password" autocomplete="new-password"></div></div>
+<div class="btns"><button id="pwChg" type="button">Parolni yangilash</button><button id="pwReset" type="button" class="sec">Dastlabki holatga qaytarish</button></div>
+<p class="note" id="pwChgMsg" role="status"></p></div>
+<div class="card" style="margin-top:14px" id="knCard"><h2 class="sh">Holat turlari (tahrirlash)</h2>
+<p class="note" style="margin-top:0">Holat nomlarini o‘zgartiring yoki o‘zingizning nomli holatingizni yozing: u tanlangan asosiy model bo‘yicha hisoblanadi.</p>
+<div id="knBox" style="max-width:640px"></div>
+<div class="btns"><button id="knSave" type="button">Nomlarni saqlash</button><button id="knReset" type="button" class="sec">Asl nomlarni tiklash</button></div>
+<h2 class="sh">O‘z holatingizni qo‘shish</h2>
+<div class="pgrid" style="max-width:640px"><div><label for="kcName">Yangi holat nomi</label><input id="kcName" type="text" maxlength="80"></div><div><label for="kcBase">Asosiy model</label><select id="kcBase"></select></div></div>
+<div class="btns"><button id="kcAdd" type="button">Qo‘shish</button></div>
+<ul id="kcList" style="padding-left:18px;font-size:13px"></ul>
+<p class="note" id="knMsg" role="status"></p></div>
+</section>
 </div></main></div>
+<script src="js/vault.js"></script>
+<script src="js/vault-data.js"></script>
 <script src="js/config.js"></script>
 <script src="js/sim.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/app.js"></script>
 <script src="js/scene3d.bundle.js"></script>
 <script src="js/scene3d-view.js"></script>
+<script src="js/report.js"></script>
 <script src="js/pdf-quiz.js"></script>
 <script src="js/journal.js"></script>
 <script src="js/mn3d.js"></script>
