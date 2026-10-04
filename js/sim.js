@@ -122,12 +122,15 @@ function cfun(n){return n<=1?0:2*(Math.log(n-1)+0.5772156649)-2*(n-1)/n}
 function buildTree(data,idx,depth,maxD,r){const n=idx.length;if(depth>=maxD||n<=1)return {size:n};const f=Math.floor(r()*data[0].length);let mn=Infinity,mx=-Infinity;for(const i of idx){const v=data[i][f];if(v<mn)mn=v;if(v>mx)mx=v}if(mn===mx)return {size:n};const sp=mn+r()*(mx-mn);const l=[],rr=[];for(const i of idx)(data[i][f]<sp?l:rr).push(i);return {f,sp,l:buildTree(data,l,depth+1,maxD,r),r:buildTree(data,rr,depth+1,maxD,r)}}
 function pathLen(t,x,d){while(t.size===undefined){t=x[t.f]<t.sp?t.l:t.r;d++}return d+cfun(t.size)}
 function ifScore(m,x){let s=0;for(const t of m.trees)s+=pathLen(t,x,0);return Math.pow(2,-(s/m.trees.length)/m.c)}
-function trainIF(data,nTrees,sub,seed){const r=rngMake(seed);const trees=[];const maxD=Math.ceil(Math.log2(sub));for(let t=0;t<nTrees;t++){const pool=Array.from({length:data.length},(_,i)=>i),m=Math.min(sub,pool.length);for(let i=0;i<m;i++){const j=i+Math.floor(r()*(pool.length-i));[pool[i],pool[j]]=[pool[j],pool[i]]}trees.push(buildTree(data,pool.slice(0,m),0,maxD,r))}
-  const m={trees,c:cfun(sub)};const sc=data.map(x=>ifScore(m,x)).sort((a,b)=>a-b);m.smin=sc[Math.floor(sc.length*0.5)];m.smax=Math.max(sc[sc.length-1],m.smin+1e-6);return m}
+function trainIF(data,nTrees,sub,seed){const r=rngMake(seed);const trees=[];const maxD=Math.ceil(Math.log2(sub));const pool=Array.from({length:data.length},(_,i)=>i);for(let t=0;t<nTrees;t++){const m=Math.min(sub,pool.length);for(let i=0;i<m;i++){const j=i+Math.floor(r()*(pool.length-i));[pool[i],pool[j]]=[pool[j],pool[i]]}trees.push(buildTree(data,pool.slice(0,m),0,maxD,r))}
+  const m={trees,c:cfun(sub)};const step=Math.max(1,Math.floor(data.length/2000));const sc=[];for(let i=0;i<data.length;i+=step)sc.push(ifScore(m,data[i]));sc.sort((a,b)=>a-b);   // chegara kalibrovkasi uchun ≤ 2000 nuqta yetarli
+  m.smin=sc[Math.floor(sc.length*0.5)];m.smax=Math.max(sc[sc.length-1],m.smin+1e-6);return m}
 // qoldiqlarni normal ma'lumotdagi tarqoqlikka moslash: p99(|r|) > 2,5 bo'lsa (shovqin ko'p) shu ustun kengaytiriladi, aks holda 1
 function fitScale(data){const q=data[0].length,sc=[];for(let j=0;j<q;j++){const a=data.map(x=>Math.abs(x[j])).sort((u,v)=>u-v);const p99=a[Math.floor(a.length*0.99)]||0;sc.push(Math.max(1,p99/2.5))}return sc}
 function trainIFS(data,nTrees,sub,seed){const sc=fitScale(data);const m=trainIF(data.map(x=>x.map((v,i)=>v/sc[i])),nTrees,sub,seed);m.sc=sc;return m}
-function trainModel(P,seed){const r=rngMake(seed);let data=[];for(let i=0;i<P.nTrain;i++){const run=runPlant('normal',r,P);const X=features(run.d,P).X;for(let k=30;k<X.length;k+=2)data.push(X[k])}const m=trainIFS(data,P.nTrees,P.sub,seed+1);m.noise=P.noise||1;return m}
+function* trainModelGen(P,seed){const r=rngMake(seed);let data=[];for(let i=0;i<P.nTrain;i++){const run=runPlant('normal',r,P);const X=features(run.d,P).X;for(let k=30;k<X.length;k+=2)data.push(X[k]);yield i/P.nTrain}
+  yield 1;const m=trainIFS(data,P.nTrees,P.sub,seed+1);m.noise=P.noise||1;return m}
+function trainModel(P,seed){const g=trainModelGen(P,seed);let x;while(!(x=g.next()).done);return x.value}
 // ---- dinamik xavf indeksi ----
 function slopeOf(a,k,w,dt){const i=Math.max(0,k-w);let s1=0,n1=0,s2=0,n2=0;for(let j=i;j<=Math.min(k,i+2);j++)if(isFinite(a[j])){s1+=a[j];n1++}for(let j=Math.max(i,k-2);j<=k;j++)if(isFinite(a[j])){s2+=a[j];n2++}if(!n1||!n2||k-i<3)return 0;return (s2/n2-s1/n1)/((k-i-2)*dt)}
 function computeIndex(d,model,P){
@@ -270,3 +273,54 @@ async function readXlsx(buf){
   return rows;
 }
 function download(name,u8,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([u8],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+
+/* ===== Kiritilgan ma'lumotni tekshirish va tozalash (sof funksiyalar — Node'da sinaladi) ===== */
+// CSV/TSV matnini qatorlarga ajratadi: qo'shtirnoq (RFC 4180), ajratgich (; , tab), BOM, \r\n
+function parseCsvText(txt){
+  txt=String(txt==null?'':txt).replace(/^\uFEFF/,'');
+  const first=(txt.split(/\r?\n/).find(l=>l.trim())||'');if(!first)return [];
+  const cnt=c=>first.split(c).length-1,dl=[';','\t',','].map(c=>[c,cnt(c)]).sort((a,b)=>b[1]-a[1])[0];const D=dl[1]>0?dl[0]:',';
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<txt.length;i++){const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"'&&cell==='')q=true;
+    else if(c===D){row.push(cell.trim());cell=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&txt[i+1]==='\n')i++;row.push(cell.trim());cell='';if(row.some(x=>x!==''))rows.push(row);row=[]}
+    else cell+=c}
+  row.push(cell.trim());if(row.some(x=>x!==''))rows.push(row);
+  return rows;
+}
+const NEED_COLS=['TT01','TT02','FT01','FT02','FT03','LT01','WT','AT01','AT02'];
+// Jadval mazmunini tekshiradi: xato matnini (o'zbekcha) yoki null qaytaradi
+function validateTable(rows,opt){
+  opt=opt||{};const minRows=opt.minRows||60;
+  if(!rows||!rows.length)return 'Fayl bo‘sh.';
+  if(rows.length<minRows+1)return 'Kamida '+minRows+' qator kerak.';
+  const hd=rows[0].map(x=>String(x).toUpperCase().trim()),miss=NEED_COLS.filter(c=>!hd.includes(c));
+  if(miss.length)return 'Ustunlar yetishmaydi: '+miss.join(', ');
+  const body=rows.slice(1);
+  for(const c of NEED_COLS){const i=hd.indexOf(c);let ok=0,neg=0;
+    for(const r of body){const v=parseFloat(String(r[i]===undefined?'':r[i]).replace(/\s/g,'').replace(',','.'));if(isFinite(v)){ok++;if(v<0)neg++}}
+    if(ok<0.8*body.length)return c+' ustuni raqamli emas (qiymatlarning kamida 80 % i son bo‘lishi kerak).';
+    if(neg>0.2*ok&&c!=='TT01'&&c!=='TT02')return c+' ustunida manfiy qiymatlar ko‘p — birliklar yoki ustun tartibini tekshiring.';}
+  return null;
+}
+// Mnemosxema modelini tozalaydi: faqat ruxsat etilgan tur, xavfsiz id, son qiymatlar, atributga tushadigan satrlar faqat xavfsiz belgilardan iborat
+function sanitizeMnemo(m,types){
+  if(!Array.isArray(m)||!m.length||m.length>2000)return null;
+  const num=(v,d)=>(typeof v==='number'||(typeof v==='string'&&v.trim()!==''))&&isFinite(+v)?+v:d;
+  const FREE=new Set(['text','label','tag','unit']),SAFE=/^[#\w(),.%\s-]{0,40}$/,KEY=/^[A-Za-z][A-Za-z0-9_]{0,20}$/;
+  const out=[];
+  for(let i=0;i<m.length;i++){const o=m[i];if(!o||typeof o!=='object'||!types.includes(o.t))return null;
+    const r={id:/^[A-Za-z0-9_-]{1,40}$/.test(String(o.id))?String(o.id):'s'+i+'x',t:o.t};
+    if(Array.isArray(o.pts))r.pts=o.pts.slice(0,500).map(p=>[num(p&&p[0],0),num(p&&p[1],0)]);
+    else{r.x=num(o.x,0);r.y=num(o.y,0);r.r=num(o.r,0);r.s=num(o.s,1);if(o.fx)r.fx=1}
+    r.p={};const P0=(o.p&&typeof o.p==='object'&&!Array.isArray(o.p))?o.p:{};
+    for(const k of Object.keys(P0)){if(!KEY.test(k)||k==='__proto__'||k==='constructor')continue;const v=P0[k];
+      if(typeof v==='number'){if(isFinite(v))r.p[k]=v}
+      else if(typeof v==='boolean')r.p[k]=v;
+      else if(typeof v==='string'){if(FREE.has(k))r.p[k]=v.slice(0,120);else if(SAFE.test(v))r.p[k]=v}}
+    out.push(r)}
+  const ids=new Set();for(const o of out){while(ids.has(o.id))o.id+='_';ids.add(o.id)}
+  return out;
+}

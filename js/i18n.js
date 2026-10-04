@@ -2,6 +2,7 @@
 // formulalar, jarayon xabarlari (AI xabarlari, Review matni) o'zbek tilida qoladi. =====
 const I18N={
 ru:{
+'☰ Boshqaruv':'☰ Управление','Quritgich aparat AI — erta ogohlantirish va hodisa tahlili':'Quritgich aparat AI — раннее предупреждение и анализ инцидентов',
 'Normal ish':'Нормальная работа','Nam material namligi keskin oshdi':'Резкий рост влажности исходного материала','Birlamchi havo yetishmovchiligi (1-1 klapan / ventilyator)':'Недостаток первичного воздуха (клапан 1-1 / вентилятор)','Gaz klapani 1-2 zich yopilmayapti (gaz oshib ketdi)':'Газовый клапан 1-2 не закрывается плотно (избыток газа)','TT02 harorat datchigi siljishi (past ko‘rsatmoqda)':'Дрейф датчика температуры TT02 (занижает)','Nam material kelishi to‘xtadi (konveyer 1)':'Прекратилась подача влажного материала (конвейер 1)','Shnekli ta’minlagich 3 tiqilib qoldi':'Заклинил шнековый питатель 3','Bunker aralashtirgichi M02 to‘xtadi — material osilib qoldi':'Остановилась мешалка бункера M02 — материал завис',
 'Erta ogohlantirish':'Раннее предупреждение','Nam materialni quritish qurilmasi':'Установка сушки влажного материала','Simulyatsiya · 4 soat · 10 s':'Симуляция · 4 ч · 10 с','Simulyatsiya · Real-time':'Симуляция · Реальное время',
 'Umumiy ko‘rinish':'Обзор','Mnemosxema':'Мнемосхема','3D ko‘rinish':'3D-вид','Trendlar':'Тренды','AI xabarlari va indeks':'Сообщения ИИ и индекс','Hodisa tahlili (Review)':'Анализ инцидента (Review)','Hodisalar jurnali':'Журнал событий','Ommaviy sinov':'Массовое тестирование','O‘z ma’lumotingiz':'Ваши данные','Matematik model':'Математическая модель','Sozlamalar':'Настройки',
@@ -30,6 +31,7 @@ ru:{
 'Himoya chegaralari: TT01 H/HH 1120/1180 °C, TT02 H/HH 380/400 °C, λ L/LL 1,05/0,95, LT01 L/LL 15/5 % va H/HH 85/95 %, AT02 H/HH 6/8 %. Qiymatlar taxminiy.':'Границы защиты: TT01 H/HH 1120/1180 °C, TT02 H/HH 380/400 °C, λ L/LL 1,05/0,95, LT01 L/LL 15/5 % и H/HH 85/95 %, AT02 H/HH 6/8 %. Значения ориентировочные.'
 },
 en:{
+'☰ Boshqaruv':'☰ Controls','Quritgich aparat AI — erta ogohlantirish va hodisa tahlili':'Quritgich aparat AI — early warning and incident analysis',
 'Normal ish':'Normal operation','Nam material namligi keskin oshdi':'Sharp rise in feed moisture','Birlamchi havo yetishmovchiligi (1-1 klapan / ventilyator)':'Primary air shortage (valve 1-1 / fan)','Gaz klapani 1-2 zich yopilmayapti (gaz oshib ketdi)':'Gas valve 1-2 leaks (excess gas)','TT02 harorat datchigi siljishi (past ko‘rsatmoqda)':'TT02 temperature sensor drift (reads low)','Nam material kelishi to‘xtadi (konveyer 1)':'Wet material feed stopped (conveyor 1)','Shnekli ta’minlagich 3 tiqilib qoldi':'Screw feeder 3 jammed','Bunker aralashtirgichi M02 to‘xtadi — material osilib qoldi':'Hopper mixer M02 stopped — material bridging',
 'Erta ogohlantirish':'Early warning','Nam materialni quritish qurilmasi':'Wet-material drying plant','Simulyatsiya · 4 soat · 10 s':'Simulation · 4 h · 10 s','Simulyatsiya · Real-time':'Simulation · Real-time',
 'Umumiy ko‘rinish':'Overview','Mnemosxema':'Mimic diagram','3D ko‘rinish':'3D view','Trendlar':'Trends','AI xabarlari va indeks':'AI messages & index','Hodisa tahlili (Review)':'Incident review','Hodisalar jurnali':'Event log','Ommaviy sinov':'Batch test','O‘z ma’lumotingiz':'Your data','Matematik model':'Mathematical model','Sozlamalar':'Settings',
@@ -67,7 +69,7 @@ const keys=new Set([...Object.keys(I18N.ru),...Object.keys(I18N.en)]);
 function scan(){const tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=tw.nextNode()){const p=n.parentElement;if(!p||p.closest(SKIP))continue;const t=n.nodeValue.trim();if(t&&keys.has(t)){const m=n.nodeValue.match(/^(\s*)[\s\S]*?(\s*)$/);nodes.push({n,uz:t,pre:m[1],post:m[2]})}}}
 window.tr=s=>(LANG==='uz'||!s)?s:((I18N[LANG]||{})[s]||s);
 function crumb(){const c=document.getElementById('crumb');if(c&&typeof VIEWS!=='undefined'&&c.dataset.v)c.textContent=tr(VIEWS[c.dataset.v])}
-function apply(l){LANG=window.LANG=l;document.documentElement.lang=l;for(const o of nodes)o.n.nodeValue=o.pre+(l==='uz'?o.uz:((I18N[l]||{})[o.uz]||o.uz))+o.post;crumb();
+function apply(l){LANG=window.LANG=l;document.documentElement.lang=l;for(const o of nodes)o.n.nodeValue=o.pre+(l==='uz'?o.uz:((I18N[l]||{})[o.uz]||o.uz))+o.post;crumb();document.title=tr('Quritgich aparat AI — erta ogohlantirish va hodisa tahlili');
   try{if(typeof cur!=='undefined'&&cur)render()}catch(e){}
   try{if(window.__journal)__journal.refresh()}catch(e){}}
 const sel=document.getElementById('lang');
