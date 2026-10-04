@@ -33,5 +33,8 @@ Internet va brauzersiz ishlaydi (Electron). **Yuklab olish:** repoda **Releases*
 Dastur imzosiz: Windows SmartScreen chiqarsa, "Qo'shimcha ma'lumot" → "Baribir ishga tushirish".
 Mahalliy sinov: `npm install` so'ng `npm run desktop`; o'rnatuvchi: `npm run dist:win` (Windows'da).
 
+## Bitta faylli versiya
+`node tools/build-single.js` → `dist/Quritgich-aparat-AI.html` (butun ilova bitta fayl, ikki marta bosib ochiladi, internet kerak emas). `--artifact` bayrog‘i claude.ai Artifact uchun variant yaratadi. Eslatma: Artifact ichida fayl yuklab olish (Excel/CSV eksport) va PDF chop etish brauzer cheklovi tufayli ishlamaydi; ular Windows dasturida va oddiy saytda ishlaydi.
+
 ## GitHub Pages
 Settings → Pages → Source: **GitHub Actions**. Sayt `main` branchga har merge’dan keyin avtomatik yangilanadi (Actions → "Pages" dan qo‘lda ham ishga tushirish mumkin).
