@@ -2,7 +2,8 @@
   "name": "quritgich-aparat-ai",
   "version": "1.0.0",
   "private": true,
+  "engines": { "node": ">=20" },
   "description": "Quritish qurilmasi: AI asosida erta ogohlantirish va hodisa tahlili simulyatori",
-  "scripts": { "test": "node --test tests/model.test.js tests/i18n.test.js",
+  "scripts": { "test": "node --test tests/model.test.js tests/i18n.test.js tests/input.test.js",
     "benchmark": "node tools/benchmark.js" }
 }

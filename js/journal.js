@@ -7,7 +7,7 @@ const store=()=>{try{return JSON.parse(localStorage.getItem('qj_ack')||'[]')}cat
 const loadAck=()=>{const a=store();mem=new Set(a||[...mem])};
 const saveAck=()=>{try{localStorage.setItem('qj_ack',JSON.stringify([...mem].slice(-2000)))}catch(e){}};
 const tt=s=>window.tr?tr(s):s;
-function scope(){return (mode==='csv'?'csv':$('kind').value+'#'+$('seed').value)+'|'+(+P.sev||0)+'|'+(+P.noise||1)}
+function scope(){return (mode==='csv'?'csv:'+(window.__csvName||''):$('kind').value+'#'+$('seed').value)+'|'+(+P.sev||0)+'|'+(+P.noise||1)}
 function events(k){
   if(!cur)return [];const run=cur.run,a=cur.e.a,out=[];const add=(kk,pri,src,txt)=>{if(kk>=0&&kk<=k)out.push({k:kk,pri,src,txt})};
   for(const v of run.ev){
@@ -28,7 +28,7 @@ function draw(list){
   const un=list.filter(e=>!e.ack&&e.pri!=='i').length;
   $('jInfo').textContent=list.length?(tt('Voqealar')+': '+list.length+' · '+tt('tasdiqlanmagan')+': '+un):tt('Hozircha voqea yo‘q.');
   $('jTab').className='jt';
-  $('jTab').innerHTML='<tr><th class="pr">'+tt('Vaqt, min')+'</th><th>'+tt('Daraja')+'</th><th>'+tt('Manba')+'</th><th>'+tt('Voqea')+'</th><th class="pr">'+tt('Holat')+'</th></tr>'+
+  $('jTab').innerHTML='<caption class="sr">'+tt('Hodisalar jurnali')+'</caption><tr><th scope="col" class="pr">'+tt('Vaqt, min')+'</th><th scope="col">'+tt('Daraja')+'</th><th scope="col">'+tt('Manba')+'</th><th scope="col">'+tt('Voqea')+'</th><th scope="col" class="pr">'+tt('Holat')+'</th></tr>'+
    list.map((e,i)=>`<tr class="${e.ack?'ak':(e.pri==='t'?'un':'')}"><td class="pr">${fmt(e.k*P.dt,1)}</td><td><span class="lv" style="background:${LV[e.pri][1]}">${tt(LV[e.pri][0])}</span></td><td>${tt(SRC[e.src])}</td><td>${esc(e.txt)}</td><td class="pr">${e.pri==='i'?'—':e.ack?'✓ '+tt('Tasdiqlandi'):`<button class="sec" data-i="${i}">${tt('Tasdiqlash')}</button>`}</td></tr>`).join('');
   $('jTab').querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{mem.add(list[+b.dataset.i].id);saveAck();refresh(true)});
 }

@@ -9,11 +9,11 @@ const RES=['TT02 ↔ aralashma modeli','FT01 ↔ gaz klapani 1-2','FT02 ↔ havo
 const PDEF=plantDefaults();
 let P={...PDEF},model=null,simModel=null,cur=null,prog=0,hover=-1,timer=null,mode='sim',lastBatch=null,working=false,geo=null,lastW=0;
 for(const k in KINDS){const o=document.createElement('option');o.value=k;o.textContent=KINDS[k];$('kind').appendChild(o)}$('kind').value='f4';
-function readP(){const raw=[1,2,3,4].map(i=>+$('w'+i).value);const s=raw.reduce((a,b)=>a+b,0)||1;P.w=raw.map(x=>x/s);raw.forEach((x,i)=>$('w'+(i+1)+'v').textContent=fmt(P.w[i],2));
+function readP(){const raw=[1,2,3,4].map(i=>+$('w'+i).value);let s=raw.reduce((a,b)=>a+b,0);if(!(s>0)){raw.splice(0,4,...PDEF.w);raw.forEach((x,i)=>$('w'+(i+1)).value=x);s=1;$('status').textContent='Barcha vaznlar 0 bo‘lishi mumkin emas — standart vaznlar tiklandi.'}P.w=raw.map(x=>x/s);raw.forEach((x,i)=>$('w'+(i+1)+'v').textContent=fmt(P.w[i],2));
   P.RTH=+$('rth').value;$('rthv').textContent=fmt(P.RTH,2);P.sev=+$('sev').value;$('sevv').textContent=P.sev>0?fmt(P.sev,2):'tasodifiy';P.noise=+$('noise').value;$('noisev').textContent='×'+fmt(P.noise,2)}
-function readPlant(){const g=(id,def)=>{const v=parseFloat($(id).value);return isFinite(v)?v:def};
-  P.sp=g('pSP',PDEF.sp);P.Fin=Math.max(0.5,g('pFin',PDEF.Fin));P.uM01=clip(g('pM01',PDEF.uM01),5,100);P.uM02=clip(g('pM02',PDEF.uM02),5,100);P.u3=clip(g('pU3',PDEF.u3),0,100);
-  P.win=g('pWin',PDEF.win);P.Mb=Math.max(5,g('pMb',PDEF.Mb));P.Th=Math.max(5,g('pTh',PDEF.Th));P.Tresp=Math.max(1,g('pTresp',PDEF.Tresp))}
+function readPlant(){const g=(id,def,lo,hi)=>{let v=parseFloat($(id).value);if(!isFinite(v))v=def;v=clip(v,lo,hi);$(id).value=v;return v};   // chegaradan tashqari qiymat qirqiladi va maydonda ko‘rsatiladi
+  P.sp=g('pSP',PDEF.sp,150,390);P.Fin=g('pFin',PDEF.Fin,0.5,15);P.uM01=g('pM01',PDEF.uM01,5,100);P.uM02=g('pM02',PDEF.uM02,5,100);P.u3=g('pU3',PDEF.u3,0,100);
+  P.win=g('pWin',PDEF.win,1,40);P.Mb=g('pMb',PDEF.Mb,5,200);P.Th=g('pTh',PDEF.Th,5,120);P.Tresp=g('pTresp',PDEF.Tresp,1,60)}
 // ---------- grafik ----------
 function setup(cv){const r=Math.min(devicePixelRatio||1,3),h=+(cv.dataset.h||(cv.dataset.h=cv.getAttribute('height')));cv.style.height=h+'px';const w=cv.clientWidth;cv.width=Math.round(w*r);cv.height=Math.round(h*r);const g=cv.getContext('2d');g.setTransform(r,0,0,r,0,0);return {g,w,h}}
 function draw(cv,o){
@@ -339,12 +339,16 @@ const VA={st:{gas:0,air1:0,air2:0,hot:0,flame:0,conv1:0,screw:0,feed:0,dry:0,pro
 const vmLayer=o=>(T[o.t]||{}).L??2;
 function vmObjHtml(o){const D=T[o.t];if(!D)return '';const inner=D.line?D.render(o):`<g transform="translate(${r2(o.x)} ${r2(o.y)})${o.r?` rotate(${r2(o.r)})`:''}${(o.s&&o.s!==1)||o.fx?` scale(${r2((o.s||1)*(o.fx?-1:1))} ${r2(o.s||1)})`:''}">${D.render(o)}</g>`;return inner}
 function vmRtFor(o,g){const D=T[o.t];if(!D||!D.rt)return null;try{const r=D.rt(o,g);if(r){r.o=o;r.g=g}return r}catch(e){console.warn(e);return null}}
+function vmWake(){if(!VA.raf&&VM.built&&!document.hidden){VA.last=performance.now();VA.raf=requestAnimationFrame(vmFrame)}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)vmWake()});
 function vmBuild(){const svg=$('vmSvg');if(!svg)return;const order=VM.model.map((o,i)=>[o,i]).sort((a,b)=>vmLayer(a[0])-vmLayer(b[0])||a[1]-b[1]);
   svg.innerHTML=VM_DEFS+`<rect width="1289" height="807" fill="url(#gBg)"/><rect id="vmGrid" width="1289" height="807" fill="url(#pGrid)" style="display:${VM.edit?'':'none'}"/><g id="vmL">${order.map(([o])=>`<g class="vo" data-id="${o.id}">${vmObjHtml(o)}</g>`).join('')}</g><g id="vmSelL"></g>`;
   VM.rt=[];svg.querySelectorAll('#vmL > .vo').forEach(g=>{const o=VM.model.find(m=>m.id===g.dataset.id);const r=vmRtFor(o,g);if(r)VM.rt.push(r)});
   if(VM.ctx)VM.rt.forEach(r=>r.dyn&&r.dyn(VM.ctx));vmDrawSel()}
 function vmRerender(o){const g=document.querySelector(`#vmL > .vo[data-id="${o.id}"]`);if(!g){vmBuild();return}g.innerHTML=vmObjHtml(o);VM.rt=VM.rt.filter(r=>r.o!==o);const r=vmRtFor(o,g);if(r){VM.rt.push(r);if(VM.ctx&&r.dyn)r.dyn(VM.ctx)}vmDrawSel()}
-function vmFrame(now){VA.raf=requestAnimationFrame(vmFrame);const svg=$('vmSvg');if(!svg||!svg.getClientRects().length){VA.last=now;return}let dt=(now-VA.last)/1000;VA.last=now;if(dt>.1)dt=.1;dt*=VA.paused?0:VA.speed;if(dt<=0)return;VA.t+=dt;
+const VM_COARSE=window.matchMedia&&matchMedia('(pointer:coarse)').matches;   // sensorli qurilmada animatsiya 30 kadr/s bilan cheklanadi
+function vmFrame(now){const svg=$('vmSvg');if(!svg||!svg.getClientRects().length||document.hidden){VA.raf=0;return}   // ko'rinmaganda tsikl to'xtaydi (showView qayta ishga tushiradi)
+  VA.raf=requestAnimationFrame(vmFrame);if(VM_COARSE&&now-VA.last<30){return}let dt=(now-VA.last)/1000;VA.last=now;if(dt>.1)dt=.1;dt*=VA.paused?0:VA.speed;if(dt<=0)return;VA.t+=dt;
   const S=VA.st,C=VA.cur;for(const k in S){const tau=k==='fan'?1.6:.7;C[k]+=(S[k]-C[k])*Math.min(1,dt/tau)}C.on=1;C.off=0;
   for(const r of VM.rt)if(r.step){try{r.step(dt,VA.t,C,S)}catch(e){}}}
 function vmUpdate(c){VM.ctx=c;const d=c.d,k=c.k,P=c.P;const cl=(v,a,b)=>Math.max(a,Math.min(b,isFinite(v)?v:0));const matOn=d.WT[k]>.3,conv1=d.conv[k]&&d.FIN[k]>.2,fanOn=d.burner[k]||d.FT03[k]>100,wf=cl(d.WT[k]/Math.max(.1,P.Fin),0,1.6),on=c.on;
@@ -429,7 +433,7 @@ function vmProps(){const box=$('vmProps');if(!box)return;const o=vmSel();if(!o){
 function vmPropsLive(){const o=vmSel();if(!o||o.pts)return;const s=(id,v)=>{const e=$(id);if(e&&document.activeElement!==e)e.value=r2(v)};s('vmX',o.x);s('vmY',o.y);s('vmR',o.r||0);s('vmS',o.s||1)}
 // ---------- fayllar ----------
 function vmExport(){const b=new Blob([JSON.stringify({format:'quritgich-mnemo',v:2,model:VM.model},null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mnemosxema.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
-function vmImport(f){const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result),m=Array.isArray(j)?j:j.model;if(!Array.isArray(m)||!m.every(o=>o&&T[o.t]))throw new Error('fayl formati noto‘g‘ri');vmPush();VM.model=m;VM.sel=null;vmBuild();vmCommit();vmHint('Sxema fayldan yuklandi.')}catch(e){vmHint('Yuklab bo‘lmadi: '+e.message)}};r.readAsText(f)}
+function vmImport(f){const r=new FileReader();r.onload=()=>{try{if(r.result.length>2e6)throw new Error('fayl juda katta');const j=JSON.parse(r.result),m=sanitizeMnemo(Array.isArray(j)?j:j&&j.model,Object.keys(T));if(!m)throw new Error('fayl formati noto‘g‘ri');vmPush();VM.model=m;VM.sel=null;vmBuild();vmCommit();vmHint('Sxema fayldan yuklandi.')}catch(e){vmHint('Yuklab bo‘lmadi: '+e.message)}};r.readAsText(f)}
 function vmReset(){if(!confirm('Sxemani asl holatiga qaytarasizmi? Kiritilgan o‘zgarishlar o‘chadi (Ctrl+Z bilan qaytarish mumkin).'))return;vmPush();VM.model=vmDefault();VM.sel=null;vmBuild();vmCommit()}
 function vmSetEdit(on){VM.edit=on;const h=$('mimic');h.classList.toggle('vmediting',on);$('vmEditB').textContent=on?'✓ Tahrirlashni tugatish':'✎ Sxemani tahrirlash';const g=$('vmGrid');if(g)g.style.display=on?'':'none';if(!on){VM.draft=null;VM.mode=null;VM.sel=null;vmHint('')}vmDrawSel();vmProps()}
 const VM_CSS=`
@@ -462,7 +466,7 @@ const VM_CSS=`
 @media (prefers-reduced-motion:reduce){#vmSvg .sping{animation-duration:6s}}
 `;
 function vmMount(host){
-  let m=null;try{const s=localStorage.getItem(VM_KEY);if(s){const j=JSON.parse(s);if(Array.isArray(j)&&j.length&&j.every(o=>o&&T[o.t]))m=j}}catch(e){}
+  let m=null;try{const s=localStorage.getItem(VM_KEY);if(s){const j=JSON.parse(s);m=sanitizeMnemo(j,Object.keys(T))}}catch(e){}
   VM.model=m||vmDefault();
   host.innerHTML=`<style>${VM_CSS}</style><div class="vmtool"><button type="button" class="sec" id="vmPlay">⏸ Pauza</button><label>Harakat tezligi <select id="vmSpd"><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label><span style="flex:1"></span>
    <button type="button" id="vmEditB">✎ Sxemani tahrirlash</button><button type="button" class="sec" id="vmFull">⛶ To‘liq ekran</button></div>
@@ -477,6 +481,7 @@ function vmMount(host){
   const svg=$('vmSvg');svg.addEventListener('pointerdown',e=>{vmDown(e);if(vmDrag)try{svg.setPointerCapture(e.pointerId)}catch(_){}});svg.addEventListener('pointermove',vmMove);svg.addEventListener('pointerup',vmUp);svg.addEventListener('pointercancel',vmUp);svg.addEventListener('dblclick',vmDbl);
   svg.addEventListener('contextmenu',e=>{if(VM.edit)e.preventDefault()});document.addEventListener('keydown',vmKey);
   host.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>vmAdd(b.dataset.add));
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){VA.paused=true;$('vmPlay').textContent='▶ Davom'}
   $('vmPlay').onclick=()=>{VA.paused=!VA.paused;$('vmPlay').textContent=VA.paused?'▶ Davom':'⏸ Pauza'};$('vmSpd').onchange=e=>{VA.speed=+e.target.value};
   $('vmFull').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else if(host.requestFullscreen)host.requestFullscreen()};
   $('vmEditB').onclick=()=>vmSetEdit(!VM.edit);$('vmUndo').onclick=vmUndo;$('vmRedo').onclick=vmRedo;$('vmSnapC').onchange=e=>{VM.grid=e.target.checked?5:0};
@@ -726,10 +731,10 @@ function reviewHtml(){
   let h=`<p><b>${esc(mode==='sim'?KINDS[run.kind]:'Yuklangan ma’lumot')}</b></p>`;
   h+=`<p><b>AI tashxisi:</b> ${esc(CAUSE[dg.code])}${dg.k>=0?' ('+fmt(dg.k*dt,0)+'-daqiqadan)':''}`+(truth!==null?` <span class="pill" style="background:${ok?'var(--ok)':'var(--trip)'}">${ok?'haqiqiy sababga mos':'haqiqiy sababga mos emas'}</span>`:'')+`</p>`;
   h+=`<p>${a.trip>=0?`Hodisa: ${fmt(a.trip*dt,1)}-daqiqada — ${EV[a.tripJ].name}. Hodisadan oldingi ogohlantirishlar: PLC alarmlari — ${ld(e.L.alarm)}, AI indeksi — ${ld(e.L.warn)}, AI diagnostika — ${ld(e.L.diag)}.`:'Himoya yoki sifat hodisasi bo‘lmadi.'}</p>`;
-  h+=`<h3>1. Voqealar ketma-ketligi</h3><div class="tw"><table><tr><th>Vaqt, min</th><th>Manba</th><th>Hodisa</th></tr>`+E.map(v=>`<tr><td>${fmt(v.k*dt,1)}</td><td>${esc(v.src)}</td><td>${esc(v.txt)}</td></tr>`).join('')+`</table></div><p class="note">* Faqat simulyatsiyada ma’lum; real jarayonda tizim uni bevosita ko‘rmaydi.</p>`;
-  h+=`<h3>2. Parametrlar o‘zgarishi</h3><div class="tw"><table><tr><th>Parametr</th><th>Nosozlikdan oldin</th><th>${a.trip>=0?'Hodisa paytida':'Kuzatuv oxirida'}</th><th>O‘zgarish</th></tr>`+tb.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')+`</table></div>`;
-  h+=`<h3>3. Texnolog xulosasi</h3><p>${esc(C.tech)}</p>${C.tr.length?'<ul>'+C.tr.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':''}`;
-  h+=`<h3>4. KIP xulosasi</h3><p>${esc(C.kip)}</p>${C.kr.length?'<ul>'+C.kr.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':''}`;
+  h+=`<h2>1. Voqealar ketma-ketligi</h2><div class="tw" tabindex="0"><table><tr><th>Vaqt, min</th><th>Manba</th><th>Hodisa</th></tr>`+E.map(v=>`<tr><td>${fmt(v.k*dt,1)}</td><td>${esc(v.src)}</td><td>${esc(v.txt)}</td></tr>`).join('')+`</table></div><p class="note">* Faqat simulyatsiyada ma’lum; real jarayonda tizim uni bevosita ko‘rmaydi.</p>`;
+  h+=`<h2>2. Parametrlar o‘zgarishi</h2><div class="tw" tabindex="0"><table><tr><th>Parametr</th><th>Nosozlikdan oldin</th><th>${a.trip>=0?'Hodisa paytida':'Kuzatuv oxirida'}</th><th>O‘zgarish</th></tr>`+tb.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')+`</table></div>`;
+  h+=`<h2>3. Texnolog xulosasi</h2><p>${esc(C.tech)}</p>${C.tr.length?'<ul>'+C.tr.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':''}`;
+  h+=`<h2>4. KIP xulosasi</h2><p>${esc(C.kip)}</p>${C.kr.length?'<ul>'+C.kr.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':''}`;
   h+=`<p class="note">Xulosa AI modeli (Isolation Forest, dinamik xavf indeksi) va fizik modellar (aralashma harorati, klapan tavsiflari, massa balansi) asosida avtomatik tuzildi. Yakuniy xulosani texnolog va KIP mutaxassisi tasdiqlashi kerak.</p>`;
   cur.reviewRows=[['Hodisa tahlili (Review)'],['Holat',mode==='sim'?KINDS[run.kind]:'Yuklangan ma’lumot'],['AI tashxisi',CAUSE[dg.code]],...(truth!==null?[['Haqiqiy sabab bilan mosligi',ok?'mos':'mos emas']]:[]),['Hodisa',a.trip>=0?`${fmt(a.trip*dt,1)} min, ${EV[a.tripJ].name}`:'yo‘q'],['PLC alarmlari lead, min',ld(e.L.alarm)],['AI indeksi lead, min',ld(e.L.warn)],['AI diagnostika lead, min',ld(e.L.diag)],[],['Voqealar ketma-ketligi'],['Vaqt, min','Manba','Hodisa'],...E.map(v=>[+(v.k*dt).toFixed(1),v.src,v.txt]),[],['Parametr','Oldin','Hodisa paytida','O‘zgarish'],...tb,[],['Texnolog xulosasi',C.tech],...C.tr.map(x=>['',x]),[],['KIP xulosasi',C.kip],...C.kr.map(x=>['',x])];
   return h;
@@ -772,7 +777,7 @@ function conclusions(k0,k1){
   return {tech,kip,tr,kr};
 }
 // ---------- boshqaruv ----------
-function runSimNow(anim){mode='sim';const r=rngMake(Math.max(1,Math.floor(+$('seed').value||1)));const run=runPlant($('kind').value,r,P);load(run);
+function runSimNow(anim){if(!simModel)return;mode='sim';model=simModel;const r=rngMake(Math.max(1,Math.floor(+$('seed').value||1)));const run=runPlant($('kind').value,r,P);load(run);
   $('status').textContent=KINDS[run.kind]+(run.ft>=0?' — nosozlik ~'+fmt(run.ft*P.dt,0)+'-daqiqada.':'.');
   if(anim)play();else{prog=run.d.TT01.length;render()}}
 function play(){clearInterval(timer);prog=0;hover=-1;const T=cur.run.d.TT01.length;timer=setInterval(()=>{prog+=Math.round(1+(+$('speed').value)*2);if(prog>=T-1){prog=T-1;clearInterval(timer);timer=null}render()},40)}
@@ -782,12 +787,17 @@ let hT=null;['c1','c2','c3','c4','c5','c6'].forEach(id=>{const c=$(id);c.addEven
 ['rth','w1','w2','w3','w4'].forEach(id=>$(id).addEventListener('input',()=>{readP();if(cur)load(cur.run)}));
 ['sev','noise'].forEach(id=>{$(id).addEventListener('input',readP);$(id).addEventListener('change',()=>{if(mode==='sim')runSimNow(false)})});
 $('truth').onchange=()=>{if(cur)render()};
+$('seed').addEventListener('change',()=>{$('seed').value=Math.max(1,Math.floor(+$('seed').value||1))});
 $('run').onclick=()=>{if(mode==='sim')runSimNow(true);else if(cur)play()};
 $('show').onclick=()=>{clearInterval(timer);timer=null;prog=cur?cur.run.d.TT01.length:0;hover=-1;render()};
 ['kind','seed'].forEach(id=>$(id).onchange=()=>{if(mode==='sim')runSimNow(false)});
 window.addEventListener('resize',()=>{const w=window.innerWidth;if(w!==lastW){lastW=w;if(cur)render()}});
-function retrain(){simModel=trainModel({...P,noise:1,sev:0},7);model=simModel}
-$('apply').onclick=()=>{readPlant();$('status').textContent='Model qayta o‘qitilmoqda…';setTimeout(()=>{retrain();lastBatch=null;$('bOut').innerHTML='';$('rocCv').classList.add('hide');$('rocCap').classList.add('hide');if(mode==='sim')runSimNow(false);$('status').textContent='Parametrlar qo‘llandi, model qayta o‘qitildi.'},30)};
+let training=false,trainTok=0;
+async function trainAsync(Pt,seed,cb){const g=trainModelGen(Pt,seed);let x;while(!(x=g.next()).done){if(cb)cb(x.value);await tick()}return x.value}
+async function retrain(cb){const tok=++trainTok;const m=await trainAsync({...P,noise:1,sev:0},7,cb);if(tok!==trainTok)return false;simModel=m;if(mode==='sim')model=m;return true}
+$('apply').onclick=async()=>{if(working||training)return;readPlant();training=true;$('apply').disabled=$('reset').disabled=true;const st=f=>{$('status').textContent='Model qayta o‘qitilmoqda… '+Math.round(f*100)+' %'};st(0);
+  try{await retrain(st);lastBatch=null;$('bOut').innerHTML='';$('rocCv').classList.add('hide');$('rocCap').classList.add('hide');if(mode==='sim')runSimNow(false);$('status').textContent='Parametrlar qo‘llandi, model qayta o‘qitildi.'}
+  catch(e){$('status').textContent='Xato: '+e.message}finally{training=false;$('apply').disabled=$('reset').disabled=false}};
 $('reset').onclick=()=>{const map={pSP:'sp',pFin:'Fin',pM01:'uM01',pM02:'uM02',pU3:'u3',pWin:'win',pMb:'Mb',pTh:'Th',pTresp:'Tresp'};for(const id in map)$(id).value=PDEF[map[id]];$('apply').click()};
 // ---------- ommaviy sinov ----------
 const METH=[['alarm','Mavjud PLC alarmlari'],['warn','AI indeksi R'],['diag','AI diagnostika'],['comb','Birgalikda (alarm + indeks + diagnostika)']];
@@ -807,12 +817,13 @@ async function batchAsync(Pb,mdl,seed,nF,nN,cb){
   for(const [k] of METH){const l=res.m[k].leads,n=l.length+res.m[k].miss;res.m[k].mean=l.length?l.reduce((a,b)=>a+b,0)/l.length:NaN;res.m[k].min=l.length?Math.min(...l):NaN;res.m[k].ok=n?l.filter(x=>x>=Pb.Tresp).length/n:NaN;res.m[k].far=res.m[k].fa/nN}
   res.dxAll=Object.values(res.dx).reduce((s,v)=>[s[0]+v[0],s[1]+v[1]],[0,0]);return res}
 function setProg(f){const p=$('prog');p.classList.remove('hide');p.firstElementChild.style.width=Math.round(f*100)+'%'}
-async function guard(ids,fn){if(working)return;working=true;ids.forEach(i=>$(i).disabled=true);$('bOut').innerHTML='<p class="msg">Hisoblanmoqda…</p>';setProg(0);
+async function guard(ids,fn){if(working||training)return;ids=[...ids,'apply','reset'];working=true;ids.forEach(i=>$(i).disabled=true);$('bOut').innerHTML='<p class="msg">Hisoblanmoqda…</p>';setProg(0);
   try{await fn()}catch(e){$('bOut').innerHTML='<p class="msg">Xato: '+esc(String(e.message||e))+'</p>'}working=false;ids.forEach(i=>$(i).disabled=false);$('prog').classList.add('hide')}
 const nf=(x,d)=>isFinite(x)?fmt(x,d):'—';
-const tbl=(rows,hdr)=>'<div class="tw"><table><tr>'+hdr.map(h=>`<th>${h}</th>`).join('')+'</tr>'+rows.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')+'</table></div>';
+const tbl=(rows,hdr)=>'<div class="tw" tabindex="0"><table><tr>'+hdr.map(h=>`<th>${h}</th>`).join('')+'</tr>'+rows.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')+'</table></div>';
 function rocPts(sc){const all=[...new Set([...sc.n,...sc.f])].sort((a,b)=>a-b);const p=all.map(t=>[sc.n.filter(x=>x>=t).length/sc.n.length,sc.f.filter(x=>x>=t).length/sc.f.length]);p.push([0,0],[1,1]);p.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);let auc=0;for(let i=1;i<p.length;i++)auc+=(p[i][0]-p[i-1][0])*(p[i][1]+p[i-1][1])/2;return {p,auc}}
-function drawRoc(sc){const cv=$('rocCv');if(!cv||!sc.n.length||!sc.f.length)return;cv.classList.remove('hide');$('rocCap').classList.remove('hide');
+let lastRoc=null;
+function drawRoc(sc){lastRoc=sc;const cv=$('rocCv');if(!cv||!sc.n.length||!sc.f.length)return;cv.classList.remove('hide');$('rocCap').classList.remove('hide');
   const {p,auc}=rocPts(sc),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=46,R=14,T=14,B=38,X=v=>L+v*(W-L-R),Y=v=>H-B-v*(H-T-B);
   x.clearRect(0,0,W,H);x.font='12px Segoe UI,Arial';x.fillStyle=css('--mut');x.strokeStyle=css('--line');x.lineWidth=1;
   for(let i=0;i<=5;i++){const v=i/5;x.beginPath();x.moveTo(X(v),Y(0));x.lineTo(X(v),Y(1));x.moveTo(X(0),Y(v));x.lineTo(X(1),Y(v));x.stroke();x.fillText(fmt(v,1),X(v)-8,H-B+16);x.fillText(fmt(v,1),L-28,Y(v)+4)}
@@ -832,16 +843,15 @@ $('bRun').onclick=()=>guard(['bRun','b5'],async()=>{
   drawRoc(r.sc);lastBatch={title:'Barcha ssenariylar (variant '+s+')',rows:[HDR,...rows],per:[H2,...per],dx:r.dxAll};
   $('bOut').innerHTML=tbl(rows,HDR)+'<h2 style="margin:16px 0 0;font-size:14px">Holat turlari bo‘yicha</h2>'+tbl(per,H2)+`<p class="msg"><b>AI sabab tashxisi aniqligi: ${r.dxAll[0]} / ${r.dxAll[1]} (${fmt(100*r.dxAll[0]/r.dxAll[1],1)} %)</b></p><p class="note">Ogohlantirish muddati hodisa bo‘lgan ${r.nTrip} ta nosozlik bo‘yicha; “yetarli” — kamida ${fmt(P.Tresp,0)} daqiqa oldin.</p><p class="note">Normal ishda soxta signal (birgalikda usul): ${fmt(r.m[METH[METH.length-1][0]].far*100,0)} % ishlarda, taxminan ${fmt(r.m[METH[METH.length-1][0]].far/(P.N*P.dt/60),3)} ta/soat.</p>`});
 $('b5').onclick=()=>guard(['bRun','b5'],async()=>{
-  const runs=[];const N=5;for(let v=1;v<=N;v++){const m=trainModel({...P,noise:1,sev:0},v*11);runs.push(await batchAsync({...P},m,v*100,10,50,f=>setProg((v-1+f)/N)))}
+  const runs=[];const N=5;for(let v=1;v<=N;v++){const m=await trainAsync({...P,noise:1,sev:0},v*11);runs.push(await batchAsync({...P},m,v*100,10,50,f=>setProg((v-1+f)/N)))}
   const st=a=>{const b=a.filter(isFinite);return b.length?{m:b.reduce((x,y)=>x+y,0)/b.length,lo:Math.min(...b),hi:Math.max(...b)}:{m:NaN,lo:NaN,hi:NaN}};const c=(o,d,u)=>isFinite(o.m)?fmt(o.m,d)+u+' ['+fmt(o.lo,d)+'–'+fmt(o.hi,d)+']':'—';
   const rows=METH.map(([k,n])=>[n,c(st(runs.map(r=>r.m[k].mean)),1,' min'),c(st(runs.map(r=>r.m[k].min)),1,' min'),c(st(runs.map(r=>r.m[k].ok*100)),0,' %'),runs.reduce((s,r)=>s+r.m[k].miss,0)+' / '+runs.reduce((s,r)=>s+r.nTrip,0),c(st(runs.map(r=>r.m[k].far)),2,'')]);
   drawRoc({n:runs.flatMap(r=>r.sc.n),f:runs.flatMap(r=>r.sc.f)});const dx=runs.reduce((s,r)=>[s[0]+r.dxAll[0],s[1]+r.dxAll[1]],[0,0]);lastBatch={title:'5 ta variant bo‘yicha o‘rtacha [min–maks]',rows:[HDR,...rows],dx};
   $('bOut').innerHTML=tbl(rows,HDR)+`<p class="msg"><b>AI sabab tashxisi aniqligi (5 variant): ${dx[0]} / ${dx[1]} (${fmt(100*dx[0]/dx[1],1)} %)</b></p><p class="note">Har bir variantda model qayta o‘qitildi (urug‘ 11·v) va ssenariylar yangidan yaratildi (urug‘ 100·v).</p><p class="note">Normal ishda soxta signal (birgalikda usul): taxminan ${fmt(runs.reduce((a,r)=>a+r.m[METH[METH.length-1][0]].far,0)/runs.length/(P.N*P.dt/60),3)} ta/soat.</p>`});
 // ---------- o'z ma'lumotingiz ----------
 const COLS=['TT01','TT02','FT01','FT02','FT03','LT01','WT','AT01','AT02','U11','U12','M01','M02'];
-function csvRows(txt){const lines=txt.replace(/\r/g,'').split('\n').filter(l=>l.trim());const dl=[';','\t',','].find(x=>lines[0].includes(x))||',';return lines.map(l=>l.split(dl).map(s=>s.trim()))}
-function parseRows(rows){if(rows.length<60)throw new Error('Kamida 60 qator kerak.');const hd=rows[0].map(x=>String(x).toUpperCase().trim());
-  const need=['TT01','TT02','FT01','FT02','FT03','LT01','WT','AT01','AT02'];const miss=need.filter(c=>!hd.includes(c));if(miss.length)throw new Error('Ustunlar yetishmaydi: '+miss.join(', '));
+const csvRows=parseCsvText;
+function parseRows(rows){const err=validateTable(rows);if(err)throw new Error(err);const hd=rows[0].map(x=>String(x).toUpperCase().trim());
   const body=rows.slice(1),T=body.length,d={};for(const v of VARS)d[v]=new Float64Array(T).fill(NaN);
   for(const c of COLS){const i=hd.indexOf(c);if(i<0)continue;d[c]=Float64Array.from(body.map(r=>r[i]!==undefined&&String(r[i]).trim()!==''?parseFloat(String(r[i]).replace(/\s/g,'').replace(',','.')):NaN))}
   if(hd.indexOf('U13')<0)d.U13=new Float64Array(T).fill(P.u3);if(hd.indexOf('M02')<0)d.M02=new Float64Array(T).fill(P.uM02);
@@ -851,11 +861,17 @@ function parseRows(rows){if(rows.length<60)throw new Error('Kamida 60 qator kera
 function findTrips(d){const N=d.TT01.length,val={TT01:d.TT01,TT02:d.TT02,LAM:d.LAM,LT01:d.LT01,AT02:d.AT02};
   for(let k=0;k<N;k++)for(let j=0;j<EV.length;j++){const e=EV[j];if(e.hidden)continue;const y=val[e.v][k];if(!isFinite(y))continue;if(e.up?y>=e.T:y<=e.T)return [{k,j}]}return []}
 $('csv').onchange=async e=>{const f=e.target.files[0];if(!f)return;
-  try{let rows;if(/\.xlsx$/i.test(f.name))rows=await readXlsx(await f.arrayBuffer());else rows=csvRows(await f.text());
-    const run=parseRows(rows);const gq=(id,def)=>{const v=parseFloat($(id).value);return v>0?v:def};P.Qg_max=gq('pQg',PDEF.Qg_max);P.Qa1_max=gq('pQa',PDEF.Qa1_max);P.Ffeed_max=gq('pFm',PDEF.Ffeed_max);P.dt=(+$('pDT').value||10)/60;const nTr=Math.max(60,Math.floor(run.d.TT01.length*(+$('pTR').value||30)/100));
-    const sub={};for(const v of VARS)sub[v]=run.d[v].slice(0,nTr);sub.burner=run.d.burner.slice(0,nTr);const X=features(sub,P).X.slice(10);model=trainIFS(X,100,Math.min(256,X.length),5);mode='csv';load(run);prog=run.d.TT01.length;render();
+  const old={Qg_max:P.Qg_max,Qa1_max:P.Qa1_max,Ffeed_max:P.Ffeed_max,dt:P.dt};
+  try{if(f.size>30e6)throw new Error('Fayl juda katta (30 MB gacha).');
+    const dtS=parseFloat($('pDT').value),trP=parseFloat($('pTR').value);
+    if(!(dtS>=1&&dtS<=3600))throw new Error('Diskretlik 1–3600 soniya oralig‘ida bo‘lishi kerak.');
+    if(!(trP>=10&&trP<=90))throw new Error('Normal deb olinadigan qism 10–90 % oralig‘ida bo‘lishi kerak.');
+    let rows;if(/\.xlsx$/i.test(f.name))rows=await readXlsx(await f.arrayBuffer());else rows=csvRows(await f.text());
+    if(rows.length>200001)throw new Error('Qatorlar soni 200 000 dan oshmasligi kerak.');
+    const run=parseRows(rows);const gq=(id,def)=>{const v=parseFloat($(id).value);return v>0?v:def};P.Qg_max=gq('pQg',PDEF.Qg_max);P.Qa1_max=gq('pQa',PDEF.Qa1_max);P.Ffeed_max=gq('pFm',PDEF.Ffeed_max);P.dt=dtS/60;const nTr=Math.max(60,Math.floor(run.d.TT01.length*trP/100));
+    const sub={};for(const v of VARS)sub[v]=run.d[v].slice(0,nTr);sub.burner=run.d.burner.slice(0,nTr);const X=features(sub,P).X.slice(10);model=trainIFS(X,100,Math.min(256,X.length),5);mode='csv';window.__csvName=f.name;load(run);prog=run.d.TT01.length;render();
     $('csvMsg').textContent=f.name+': '+run.d.TT01.length+' qator yuklandi. Model birinchi '+nTr+' qatorda o‘qitildi (normal rejim deb olindi).';$('status').textContent=f.name+' — foydalanuvchi ma’lumoti.';showView('overview')}
-  catch(er){$('csvMsg').textContent='Xato: '+er.message}e.target.value=''};
+  catch(er){Object.assign(P,old);$('csvMsg').textContent='Xato: '+er.message}e.target.value=''};
 $('back').onclick=()=>{P.Qg_max=PDEF.Qg_max;P.Qa1_max=PDEF.Qa1_max;P.Ffeed_max=PDEF.Ffeed_max;P.dt=DT;model=simModel;mode='sim';runSimNow(false);$('csvMsg').textContent='Simulyatsiya rejimiga qaytildi.'};
 $('sample').onclick=()=>{const run=runPlant('f4',rngMake(9),{...P,noise:1,sev:0});const d=run.d;const rows=[COLS];
   for(let k=0;k<d.TT01.length;k++)rows.push(COLS.map(c=>+(+d[c][k]).toFixed(3)));download('namuna_quritgich.xlsx',buildXlsx([{name:'Ma’lumot',rows}]),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')};
@@ -866,17 +882,18 @@ $('xExp').onclick=()=>{if(!cur)return;const d=cur.run.d,id=cur.idx,T=d.TT01.leng
   if(lastBatch){const br=[[lastBatch.title],[],...lastBatch.rows];if(lastBatch.per)br.push([],...lastBatch.per);if(lastBatch.dx)br.push([],['AI tashxisi aniqligi',lastBatch.dx[0]+' / '+lastBatch.dx[1]]);sh.push({name:'Ommaviy sinov',rows:br})}
   download('quritgich_AI_review.xlsx',buildXlsx(sh),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')};
 // ---------- bo'limlar ----------
-function tickClock(){const d=new Date();$('clock').textContent=d.toLocaleDateString('uz-UZ')+' '+d.toLocaleTimeString('uz-UZ')}setInterval(tickClock,1000);tickClock();
-$('theme').onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==='light'?'':'light';if(cur)render()};
+function tickClock(){const d=new Date();const z=n=>String(n).padStart(2,'0');$('clock').textContent=d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds())}setInterval(tickClock,1000);tickClock();
+(()=>{let t=null;try{t=localStorage.getItem('qtheme')}catch(e){}if(t===null&&window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)t='light';if(t==='light')document.documentElement.dataset.theme='light'})();
+$('theme').onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==='light'?'':'light';try{localStorage.setItem('qtheme',r.dataset.theme==='light'?'light':'dark')}catch(e){}if(cur)render();if(lastRoc&&!$('rocCv').classList.contains('hide'))drawRoc(lastRoc)};
 $('refresh').onclick=()=>$('run').click();
 const VIEWS={overview:'Umumiy ko‘rinish',mimic:'Mnemosxema','3d':'3D ko‘rinish',trends:'Trendlar',ai:'AI xabarlari va indeks',review:'Hodisa tahlili (Review)',journal:'Hodisalar jurnali',batch:'Ommaviy sinov',data:'O‘z ma’lumotingiz',math:'Matematik model',settings:'Sozlamalar'};
 const LIVE=['overview','mimic','3d','trends','ai','review','journal'];
 function moveTo(node,view,slot){const pl=document.querySelector(`#v-${view} [data-place="${slot}"]`);if(pl&&node.parentNode!==pl)pl.appendChild(node)}
-function showView(v){if(!VIEWS[v])v='overview';document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+function showView(v){if(!Object.prototype.hasOwnProperty.call(VIEWS,v))v='overview';document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
   $('crumb').textContent=window.tr?tr(VIEWS[v]):VIEWS[v];$('crumb').dataset.v=v;$('ctrl').style.display=LIVE.includes(v)?'':'none';
-  if(v==='overview'||v==='mimic')moveTo($('mimic'),v,'mimic');if(v==='overview'||v==='ai'){moveTo($('kvwrap'),v,'kv');moveTo($('barswrap'),v,'bars')}
+  if(v==='overview'||v==='mimic')moveTo($('mimic'),v,'mimic');if(v==='overview'||v==='mimic')vmWake();if(v==='overview'||v==='ai'){moveTo($('kvwrap'),v,'kv');moveTo($('barswrap'),v,'bars')}
   if(history.replaceState)history.replaceState(null,'','#'+v);window.scrollTo({top:0});lastW=0;if(cur)render()}
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 showView((location.hash||'#overview').slice(1));
 readP();readPlant();P.dt=DT;
-setTimeout(()=>{retrain();$('status').textContent='Tayyor.';runSimNow(false)},50);
+(async()=>{await tick();try{await retrain(f=>{$('status').textContent='Model o‘qitilmoqda… '+Math.round(f*100)+' %'});$('status').textContent='Tayyor.';runSimNow(false)}catch(e){$('status').textContent='Xato: '+e.message}})();

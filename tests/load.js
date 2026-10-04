@@ -3,5 +3,5 @@ const vm=require('vm'),fs=require('fs'),path=require('path');
 const root=path.join(__dirname,'..');
 const ctx=vm.createContext({console,TextEncoder,TextDecoder,Math});
 for(const f of ['js/config.js','js/sim.js'])vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),ctx,{filename:f});
-module.exports=vm.runInContext(`({CONFIG,KINDS,FAULTS,TRUTH,EV,plantDefaults,rngMake,runPlant,residuals,features,trainModel,computeIndex,analyseRun,diagnose})`,ctx);
+module.exports=vm.runInContext(`({CONFIG,KINDS,FAULTS,TRUTH,EV,plantDefaults,rngMake,runPlant,residuals,features,trainModel,computeIndex,analyseRun,diagnose,parseCsvText,validateTable,sanitizeMnemo,NEED_COLS})`,ctx);
 module.exports.root=root;
