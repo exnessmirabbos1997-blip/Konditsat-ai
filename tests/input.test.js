@@ -44,3 +44,8 @@ test('sxema importi: noto‘g‘ri tur/format rad etiladi, id lar noyob',()=>{
   const m=S.sanitizeMnemo([{t:'label',id:'a',x:1,y:1,p:{}},{t:'label',id:'a',x:2,y:2,p:{}}],TYPES);
   assert.notEqual(m[0].id,m[1].id);
 });
+
+test('CSS: yalang‘och <main> qoidasi yo‘q (landmark maketni buzmasin)',()=>{
+  const css=require('fs').readFileSync(require('path').join(__dirname,'..','css','style.css'),'utf8');
+  assert.ok(!/(^|[}\s,])main\s*\{/.test(css),'css da yalang‘och main{...} qoidasi bor');
+});
